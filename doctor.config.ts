@@ -31,8 +31,8 @@ export default {
         rules: ['react-doctor/no-event-handler'],
       },
       {
-        // El delay() es latencia simulada del mock — desaparece con el backend.
-        files: ['src/services/api/catalogosService.js'],
+        // El delay() es latencia simulada de los mocks — desaparece con el backend.
+        files: ['src/services/api/catalogosService.js', 'src/services/api/arcaService.js'],
         rules: ['react-doctor/async-defer-await'],
       },
       {

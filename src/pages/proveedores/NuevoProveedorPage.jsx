@@ -1,5 +1,5 @@
-import { UserPlus } from 'lucide-react'
-import { ModulePlaceholder } from '../../components/ui/ModulePlaceholder'
+import { NuevoProveedorWizard } from './wizard/NuevoProveedorWizard'
+
 export function NuevoProveedorPage() {
-  return <ModulePlaceholder title="Alta de Proveedor" description="Wizard de registro de proveedores — próximo sprint" icon={UserPlus} />
+  return <NuevoProveedorWizard />
 }

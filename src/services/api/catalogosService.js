@@ -7,6 +7,8 @@
  * simula un municipio que aún no parametrizó sus modalidades.
  */
 
+import { resolveTenantId } from '../../config/tenants'
+
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
 const AREAS_SOLICITANTES = [
@@ -69,4 +71,30 @@ export async function getModalidades() {
 export async function getProveedoresHabilitados() {
   await delay(350)
   return PROVEEDORES_HABILITADOS
+}
+
+// Rubros parametrizados POR TENANT: cada municipio define su propio nomenclador.
+// Con backend: apiClient.get('/catalogos/rubros') ya filtrado por x-tenant-id.
+const RUBROS_POR_TENANT = {
+  'san-miguel-tucuman': [
+    { id: 'informatica',    nombre: 'Informática y Tecnología' },
+    { id: 'obra-publica',   nombre: 'Obra Pública y Construcción' },
+    { id: 'insumos-oficina',nombre: 'Insumos de Oficina' },
+    { id: 'espacios-verdes',nombre: 'Espacios Verdes y Paisajismo' },
+    { id: 'alimentos',      nombre: 'Alimentos y Catering' },
+    { id: 'limpieza',       nombre: 'Limpieza e Higiene Urbana' },
+    { id: 'transporte',     nombre: 'Transporte y Logística' },
+    { id: 'salud',          nombre: 'Insumos Médicos y Salud' },
+  ],
+  'demo': [
+    { id: 'general',  nombre: 'Rubro General Demo' },
+    { id: 'servicios',nombre: 'Servicios Profesionales' },
+  ],
+}
+
+export async function getRubros() {
+  await delay(400)
+  // Simula municipio sin nomenclador cargado (restricción de negocio)
+  if (new URLSearchParams(window.location.search).has('sinRubros')) return []
+  return RUBROS_POR_TENANT[resolveTenantId()] ?? []
 }
