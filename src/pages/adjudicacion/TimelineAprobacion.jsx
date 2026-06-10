@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCircle2, XCircle, Clock, ArrowRight, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+import { CheckCircle2, XCircle, Clock, ArrowRight, ChevronDown, ChevronUp, Loader2, AlertTriangle } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { ESTADOS_ETAPA } from './adjudicacionReducer'
 
@@ -40,28 +40,107 @@ function lineaColor(estado) {
   return 'bg-tenant-border/25'
 }
 
-export function TimelineAprobacion({ circuito, onFirmar, firmando, userRole }) {
+// Panel de confirmación Neon-Glass — muestra antes de ejecutar la firma
+function ConfirmacionFirma({ pendingFirma, etapaLabel, userName, firmando, onConfirmar, onCancelar }) {
+  const esAprobacion = pendingFirma.accion === 'aprobar'
+  return (
+    <div className={cn(
+      'p-3 rounded-xl border backdrop-blur-glass space-y-3',
+      esAprobacion
+        ? 'bg-tenant-success/8 border-tenant-success/35'
+        : 'bg-tenant-danger/8 border-tenant-danger/35',
+    )}>
+      <p className={cn(
+        'text-[10px] font-bold uppercase tracking-wider',
+        esAprobacion ? 'text-tenant-success' : 'text-tenant-danger',
+      )}>
+        {esAprobacion ? 'Confirmar Aprobación' : 'Confirmar Rechazo Fundamentado'}
+      </p>
+      <div className="text-[11px] text-tenant-muted space-y-1">
+        <p>Etapa: <span className="text-tenant-text font-medium">{etapaLabel}</span></p>
+        <p>Firmante: <span className="text-tenant-text font-medium">{userName}</span></p>
+        {pendingFirma.obs && (
+          <p className="italic">Observación: <span className="text-tenant-text">"{pendingFirma.obs}"</span></p>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={firmando}
+          onClick={onConfirmar}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl',
+            'text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed',
+            esAprobacion
+              ? 'bg-tenant-success/20 border border-tenant-success/40 text-tenant-success hover:bg-tenant-success/30'
+              : 'bg-tenant-danger/20 border border-tenant-danger/40 text-tenant-danger hover:bg-tenant-danger/30',
+          )}
+        >
+          {firmando
+            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            : esAprobacion ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />
+          }
+          {firmando ? 'Procesando...' : esAprobacion ? 'Sí, Aprobar' : 'Sí, Rechazar'}
+        </button>
+        <button
+          type="button"
+          disabled={firmando}
+          onClick={onCancelar}
+          className="flex-1 py-2 rounded-xl text-xs font-bold transition-all bg-tenant-surface/60 border border-tenant-border/40 text-tenant-muted hover:text-tenant-text disabled:opacity-50"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export function TimelineAprobacion({ circuito, onFirmar, firmando, userRole, userName = 'Usuario', readOnly = false }) {
   // null  = usar auto-expand (la etapa en progreso)
   // false = usuario cerró explícitamente todo
   // 'id'  = usuario abrió este paso manualmente
-  const [override, setOverride] = useState(null)
-  const [obs,      setObs]      = useState('')
+  const [override,     setOverride]     = useState(null)
+  const [obs,          setObs]          = useState('')
+  const [obsError,     setObsError]     = useState('')
+  const [pendingFirma, setPendingFirma] = useState(null)  // { etapaId, accion, obs } | null
 
   // Derivado en render — sin useEffect, sin estado derivado
   const etapaActivaId = circuito.find(e => e.estado === ESTADOS_ETAPA.EN_PROGRESO)?.id ?? null
-  const expandida = override === false ? null : (override ?? etapaActivaId)
+  const expandida     = override === false ? null : (override ?? etapaActivaId)
 
   const puedesFirmar = (etapa) =>
     etapa.estado === ESTADOS_ETAPA.EN_PROGRESO && userRole === etapa.rol
 
-  const handleFirmar = (etapaId, accion) => {
-    onFirmar(etapaId, accion, obs)
-    setObs('')
-    setOverride(null)  // vuelve al auto-expand para que la próxima etapa activa se abra sola
+  // Solicita confirmación — valida observaciones obligatorias en rechazo
+  const handleClickFirmar = (etapaId, accion) => {
+    if (accion === 'rechazar' && !obs.trim()) {
+      setObsError('El rechazo requiere una observación fundamentada.')
+      return
+    }
+    setObsError('')
+    setPendingFirma({ etapaId, accion, obs })
   }
 
+  const handleConfirmar = () => {
+    if (!pendingFirma) return
+    const { etapaId, accion, obs: pendingObs } = pendingFirma
+    setPendingFirma(null)
+    setObs('')
+    setObsError('')
+    setOverride(null)  // auto-expand avanzará a la próxima etapa activa
+    onFirmar(etapaId, accion, pendingObs)
+  }
+
+  const handleCancelarConfirmacion = () => setPendingFirma(null)
+
   const toggle = (id) => {
+    if (pendingFirma) setPendingFirma(null)
     setOverride(expandida === id ? false : id)
+  }
+
+  const handleObsChange = (e) => {
+    setObs(e.target.value)
+    if (obsError) setObsError('')
   }
 
   return (
@@ -124,58 +203,79 @@ export function TimelineAprobacion({ circuito, onFirmar, firmando, userRole }) {
                   </div>
                 )}
 
-                {puedesFirmar(etapa) && (
+                {!readOnly && puedesFirmar(etapa) && (
                   <div className="mt-3 space-y-2 p-3 rounded-xl bg-tenant-accent/8 border border-tenant-accent/25">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-tenant-accent">
-                      Es tu turno de firmar
-                    </p>
-                    <textarea
-                      aria-label="Observaciones para la firma (opcional)"
-                      value={obs}
-                      onChange={e => setObs(e.target.value)}
-                      placeholder="Observaciones (opcional)..."
-                      rows={2}
-                      className={cn(
-                        'w-full text-xs rounded-lg px-3 py-2 resize-none',
-                        'bg-tenant-surface/60 border border-tenant-border/40',
-                        'text-tenant-text placeholder:text-tenant-muted',
-                        'focus:outline-none focus:border-tenant-accent/60',
-                      )}
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={firmando}
-                        onClick={() => handleFirmar(etapa.id, 'aprobar')}
-                        className={cn(
-                          'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl',
-                          'text-xs font-bold transition-all',
-                          'bg-tenant-success/20 border border-tenant-success/40 text-tenant-success',
-                          'hover:bg-tenant-success/30 disabled:opacity-50 disabled:cursor-not-allowed',
-                        )}
-                      >
-                        {firmando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                        Aprobar
-                      </button>
-                      <button
-                        type="button"
-                        disabled={firmando}
-                        onClick={() => handleFirmar(etapa.id, 'rechazar')}
-                        className={cn(
-                          'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl',
-                          'text-xs font-bold transition-all',
-                          'bg-tenant-danger/20 border border-tenant-danger/40 text-tenant-danger',
-                          'hover:bg-tenant-danger/30 disabled:opacity-50 disabled:cursor-not-allowed',
-                        )}
-                      >
-                        {firmando ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-                        Rechazar
-                      </button>
-                    </div>
+                    {pendingFirma?.etapaId === etapa.id ? (
+                      <ConfirmacionFirma
+                        pendingFirma={pendingFirma}
+                        etapaLabel={etapa.label}
+                        userName={userName}
+                        firmando={firmando}
+                        onConfirmar={handleConfirmar}
+                        onCancelar={handleCancelarConfirmacion}
+                      />
+                    ) : (
+                      <>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-tenant-accent">
+                          Es tu turno de firmar
+                        </p>
+                        <div className="space-y-1.5">
+                          <textarea
+                            aria-label="Observaciones para la firma (requeridas en caso de rechazo)"
+                            value={obs}
+                            onChange={handleObsChange}
+                            placeholder="Observaciones (obligatorio para rechazar)..."
+                            rows={2}
+                            className={cn(
+                              'w-full text-xs rounded-lg px-3 py-2 resize-none',
+                              'bg-tenant-surface/60 border text-tenant-text placeholder:text-tenant-muted',
+                              'focus:outline-none focus:border-tenant-accent/60 transition-colors',
+                              obsError ? 'border-tenant-danger/60' : 'border-tenant-border/40',
+                            )}
+                          />
+                          {obsError && (
+                            <p className="flex items-center gap-1 text-[10px] text-tenant-danger">
+                              <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                              {obsError}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            disabled={firmando}
+                            onClick={() => handleClickFirmar(etapa.id, 'aprobar')}
+                            className={cn(
+                              'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl',
+                              'text-xs font-bold transition-all',
+                              'bg-tenant-success/20 border border-tenant-success/40 text-tenant-success',
+                              'hover:bg-tenant-success/30 disabled:opacity-50 disabled:cursor-not-allowed',
+                            )}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Aprobar
+                          </button>
+                          <button
+                            type="button"
+                            disabled={firmando}
+                            onClick={() => handleClickFirmar(etapa.id, 'rechazar')}
+                            className={cn(
+                              'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl',
+                              'text-xs font-bold transition-all',
+                              'bg-tenant-danger/20 border border-tenant-danger/40 text-tenant-danger',
+                              'hover:bg-tenant-danger/30 disabled:opacity-50 disabled:cursor-not-allowed',
+                            )}
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            Rechazar
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
-                {etapa.estado === ESTADOS_ETAPA.EN_PROGRESO && !puedesFirmar(etapa) && (
+                {!readOnly && etapa.estado === ESTADOS_ETAPA.EN_PROGRESO && !puedesFirmar(etapa) && (
                   <p className="text-[11px] text-tenant-muted italic">
                     Aguardando firma de: <span className="font-medium text-tenant-text">{etapa.rolLabel}</span>
                   </p>

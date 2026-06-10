@@ -283,3 +283,10 @@ export async function getEventosAuditoria(tenantId, filtros = {}) {
   const resumen   = calcularResumen(eventos)
   return { eventos, resumen }
 }
+
+// Stub de escritura para módulos que generan eventos (recepción, etc.)
+// En producción: POST /api/auditoria. El mock no persiste (datos hardcodeados).
+export async function logEventoExterno(_tenantId, _evento) {
+  await delay_ms(50)
+  return { ok: true }
+}
