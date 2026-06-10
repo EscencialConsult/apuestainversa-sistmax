@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { DashboardLayout } from './layouts/DashboardLayout'
+import { PublicLayout }    from './layouts/PublicLayout'
 import { getAllowedRoles } from './config/navigation'
 
 // Code-splitting por módulo: cada página es un chunk independiente.
@@ -55,8 +56,13 @@ export default function App() {
           <BrowserRouter>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                {/* Pública */}
+                {/* Pública: login */}
                 <Route path="/login" element={<LoginPage />} />
+
+                {/* Portal ciudadano — acceso libre, sin inicio de sesión */}
+                <Route element={<PublicLayout />}>
+                  <Route path="/portal" element={<PortalPage />} />
+                </Route>
 
                 {/* Privadas: requieren sesión; el rol se valida por ruta */}
                 <Route element={<ProtectedRoute />}>
@@ -79,7 +85,6 @@ export default function App() {
                     <Route path="/adjudicacion" element={<Guarded path="/adjudicacion"><AdjudicacionPage /></Guarded>} />
                     <Route path="/aprobacion" element={<Guarded path="/aprobacion"><AprobacionPage /></Guarded>} />
                     <Route path="/auditoria" element={<Guarded path="/auditoria"><AuditoriaPage /></Guarded>} />
-                    <Route path="/portal" element={<PortalPage />} />
 
                     <Route path="/unauthorized" element={<UnauthorizedPage />} />
                     {/* Comodín: cualquier ruta desconocida → 404 amigable */}
