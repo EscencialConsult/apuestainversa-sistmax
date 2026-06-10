@@ -95,7 +95,7 @@ function ConfirmacionFirma({ pendingFirma, etapaLabel, userName, firmando, onCon
   )
 }
 
-export function TimelineAprobacion({ circuito, onFirmar, firmando, userRole, userName = 'Usuario' }) {
+export function TimelineAprobacion({ circuito, onFirmar, firmando, userRole, userName = 'Usuario', readOnly = false }) {
   // null  = usar auto-expand (la etapa en progreso)
   // false = usuario cerró explícitamente todo
   // 'id'  = usuario abrió este paso manualmente
@@ -203,7 +203,7 @@ export function TimelineAprobacion({ circuito, onFirmar, firmando, userRole, use
                   </div>
                 )}
 
-                {puedesFirmar(etapa) && (
+                {!readOnly && puedesFirmar(etapa) && (
                   <div className="mt-3 space-y-2 p-3 rounded-xl bg-tenant-accent/8 border border-tenant-accent/25">
                     {pendingFirma?.etapaId === etapa.id ? (
                       <ConfirmacionFirma
@@ -275,7 +275,7 @@ export function TimelineAprobacion({ circuito, onFirmar, firmando, userRole, use
                   </div>
                 )}
 
-                {etapa.estado === ESTADOS_ETAPA.EN_PROGRESO && !puedesFirmar(etapa) && (
+                {!readOnly && etapa.estado === ESTADOS_ETAPA.EN_PROGRESO && !puedesFirmar(etapa) && (
                   <p className="text-[11px] text-tenant-muted italic">
                     Aguardando firma de: <span className="font-medium text-tenant-text">{etapa.rolLabel}</span>
                   </p>
