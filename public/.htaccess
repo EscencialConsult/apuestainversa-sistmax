@@ -1,0 +1,12 @@
+# SICST MAX — Configuración Apache para SPA (BrowserRouter).
+# Requisito estricto del manual de instalación on-premise:
+# toda ruta desconocida debe reescribirse a index.html.
+# Requiere mod_rewrite habilitado y AllowOverride All en el VirtualHost.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
