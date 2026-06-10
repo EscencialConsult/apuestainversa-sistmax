@@ -41,8 +41,15 @@ export default {
         'slide-in':   'slideIn 0.25s ease-out',
         'fade-in':    'fadeIn 0.3s ease-out',
         'bid-drop':   'bidDrop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'flash-out':  'flashOut 5s ease-out forwards',
       },
       keyframes: {
+        flashOut: {
+          '0%':   { opacity: '0', transform: 'translate(-50%, 8px)' },
+          '8%':   { opacity: '1', transform: 'translate(-50%, 0)' },
+          '80%':  { opacity: '1' },
+          '100%': { opacity: '0' },
+        },
         slideIn:  { from: { transform: 'translateX(-100%)' }, to: { transform: 'translateX(0)' } },
         fadeIn:   { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
         bidDrop:  { from: { opacity: '0', transform: 'translateY(-16px) scale(0.96)' }, to: { opacity: '1', transform: 'translateY(0) scale(1)' } },
