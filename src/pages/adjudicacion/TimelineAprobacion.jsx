@@ -1,18 +1,20 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { CheckCircle2, XCircle, Clock, ArrowRight, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { ESTADOS_ETAPA } from './adjudicacionReducer'
 
 const HORA_FORMAT = new Intl.DateTimeFormat('es-AR', { dateStyle: 'short', timeStyle: 'short' })
 
+// Estable a nivel módulo — no se reconstruye en cada render de EstadoBadge
+const ESTADO_MAP = {
+  [ESTADOS_ETAPA.APROBADO]:    { label: 'Aprobado',    cls: 'bg-tenant-success/15 border-tenant-success/40 text-tenant-success' },
+  [ESTADOS_ETAPA.RECHAZADO]:   { label: 'Rechazado',   cls: 'bg-tenant-danger/15  border-tenant-danger/40  text-tenant-danger'  },
+  [ESTADOS_ETAPA.EN_PROGRESO]: { label: 'En progreso', cls: 'bg-tenant-accent/15  border-tenant-accent/40  text-tenant-accent animate-pulse-slow' },
+  [ESTADOS_ETAPA.PENDIENTE]:   { label: 'Pendiente',   cls: 'bg-tenant-surface/60 border-tenant-border/40  text-tenant-muted'   },
+}
+
 function EstadoBadge({ estado }) {
-  const map = {
-    [ESTADOS_ETAPA.APROBADO]:    { label: 'Aprobado',    cls: 'bg-tenant-success/15 border-tenant-success/40 text-tenant-success' },
-    [ESTADOS_ETAPA.RECHAZADO]:   { label: 'Rechazado',   cls: 'bg-tenant-danger/15  border-tenant-danger/40  text-tenant-danger'  },
-    [ESTADOS_ETAPA.EN_PROGRESO]: { label: 'En progreso', cls: 'bg-tenant-accent/15  border-tenant-accent/40  text-tenant-accent animate-pulse-slow' },
-    [ESTADOS_ETAPA.PENDIENTE]:   { label: 'Pendiente',   cls: 'bg-tenant-surface/60 border-tenant-border/40  text-tenant-muted'   },
-  }
-  const { label, cls } = map[estado] ?? map[ESTADOS_ETAPA.PENDIENTE]
+  const { label, cls } = ESTADO_MAP[estado] ?? ESTADO_MAP[ESTADOS_ETAPA.PENDIENTE]
   return (
     <span className={cn('px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider', cls)}>
       {label}
@@ -32,21 +34,22 @@ function CirculoEstado({ estado }) {
 }
 
 function lineaColor(estado) {
-  if (estado === ESTADOS_ETAPA.APROBADO)  return 'bg-tenant-success/40'
-  if (estado === ESTADOS_ETAPA.RECHAZADO) return 'bg-tenant-danger/40'
+  if (estado === ESTADOS_ETAPA.APROBADO)    return 'bg-tenant-success/40'
+  if (estado === ESTADOS_ETAPA.RECHAZADO)   return 'bg-tenant-danger/40'
   if (estado === ESTADOS_ETAPA.EN_PROGRESO) return 'bg-tenant-accent/30'
   return 'bg-tenant-border/25'
 }
 
 export function TimelineAprobacion({ circuito, onFirmar, firmando, userRole }) {
-  const [expandida, setExpandida] = useState(null)
-  const [obs, setObs] = useState('')
+  // null  = usar auto-expand (la etapa en progreso)
+  // false = usuario cerró explícitamente todo
+  // 'id'  = usuario abrió este paso manualmente
+  const [override, setOverride] = useState(null)
+  const [obs,      setObs]      = useState('')
 
-  // Auto-expande la etapa activa cuando el circuito cambia (tras una firma)
-  useEffect(() => {
-    const activa = circuito.find(e => e.estado === ESTADOS_ETAPA.EN_PROGRESO)
-    if (activa) setExpandida(activa.id)
-  }, [circuito])
+  // Derivado en render — sin useEffect, sin estado derivado
+  const etapaActivaId = circuito.find(e => e.estado === ESTADOS_ETAPA.EN_PROGRESO)?.id ?? null
+  const expandida = override === false ? null : (override ?? etapaActivaId)
 
   const puedesFirmar = (etapa) =>
     etapa.estado === ESTADOS_ETAPA.EN_PROGRESO && userRole === etapa.rol
@@ -54,14 +57,17 @@ export function TimelineAprobacion({ circuito, onFirmar, firmando, userRole }) {
   const handleFirmar = (etapaId, accion) => {
     onFirmar(etapaId, accion, obs)
     setObs('')
-    setExpandida(null)
+    setOverride(null)  // vuelve al auto-expand para que la próxima etapa activa se abra sola
+  }
+
+  const toggle = (id) => {
+    setOverride(expandida === id ? false : id)
   }
 
   return (
     <div className="flex flex-col">
       {circuito.map((etapa, idx) => (
         <div key={etapa.id} className="flex gap-3">
-          {/* Columna izquierda: ícono + conector */}
           <div className="flex flex-col items-center">
             <CirculoEstado estado={etapa.estado} />
             {idx < circuito.length - 1 && (
@@ -69,24 +75,20 @@ export function TimelineAprobacion({ circuito, onFirmar, firmando, userRole }) {
             )}
           </div>
 
-          {/* Columna derecha: contenido */}
           <div className={cn('flex-1 min-w-0', idx < circuito.length - 1 ? 'pb-5' : 'pb-1')}>
-            {/* Cabecera clickeable */}
             <button
               type="button"
+              aria-label={`${etapa.label} — ${ESTADO_MAP[etapa.estado]?.label ?? etapa.estado}`}
               className="w-full text-left flex items-start justify-between gap-2 group"
-              onClick={() => setExpandida(prev => prev === etapa.id ? null : etapa.id)}
+              onClick={() => toggle(etapa.id)}
             >
               <div className="flex-1 min-w-0">
                 <p className={cn(
                   'text-sm font-semibold leading-tight',
-                  etapa.estado === ESTADOS_ETAPA.EN_PROGRESO
-                    ? 'text-tenant-accent'
-                    : etapa.estado === ESTADOS_ETAPA.APROBADO
-                      ? 'text-tenant-success'
-                      : etapa.estado === ESTADOS_ETAPA.RECHAZADO
-                        ? 'text-tenant-danger'
-                        : 'text-tenant-muted',
+                  etapa.estado === ESTADOS_ETAPA.EN_PROGRESO  ? 'text-tenant-accent'
+                  : etapa.estado === ESTADOS_ETAPA.APROBADO   ? 'text-tenant-success'
+                  : etapa.estado === ESTADOS_ETAPA.RECHAZADO  ? 'text-tenant-danger'
+                  : 'text-tenant-muted',
                 )}>
                   {etapa.label}
                 </p>
@@ -100,12 +102,10 @@ export function TimelineAprobacion({ circuito, onFirmar, firmando, userRole }) {
               </div>
             </button>
 
-            {/* Cuerpo expandido */}
             {expandida === etapa.id && (
               <div className="mt-2 space-y-2 animate-fade-in">
                 <p className="text-[11px] text-tenant-muted leading-snug">{etapa.descripcion}</p>
 
-                {/* Datos de firma si ya fue procesada */}
                 {(etapa.estado === ESTADOS_ETAPA.APROBADO || etapa.estado === ESTADOS_ETAPA.RECHAZADO) && (
                   <div className={cn(
                     'p-2.5 rounded-xl border text-[11px] space-y-1',
@@ -124,13 +124,13 @@ export function TimelineAprobacion({ circuito, onFirmar, firmando, userRole }) {
                   </div>
                 )}
 
-                {/* Formulario de firma — solo para el rol activo en la etapa en progreso */}
                 {puedesFirmar(etapa) && (
                   <div className="mt-3 space-y-2 p-3 rounded-xl bg-tenant-accent/8 border border-tenant-accent/25">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-tenant-accent">
                       Es tu turno de firmar
                     </p>
                     <textarea
+                      aria-label="Observaciones para la firma (opcional)"
                       value={obs}
                       onChange={e => setObs(e.target.value)}
                       placeholder="Observaciones (opcional)..."
@@ -175,7 +175,6 @@ export function TimelineAprobacion({ circuito, onFirmar, firmando, userRole }) {
                   </div>
                 )}
 
-                {/* Etapa en progreso pero no es el usuario — modo solo lectura */}
                 {etapa.estado === ESTADOS_ETAPA.EN_PROGRESO && !puedesFirmar(etapa) && (
                   <p className="text-[11px] text-tenant-muted italic">
                     Aguardando firma de: <span className="font-medium text-tenant-text">{etapa.rolLabel}</span>
