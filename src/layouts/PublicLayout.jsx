@@ -54,7 +54,7 @@ export function PublicLayout() {
       </header>
 
       {/* ── Contenido ──────────────────────────────────────────────────────── */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8">
+      <main className="flex-1 w-full">
         <Outlet />
       </main>
 

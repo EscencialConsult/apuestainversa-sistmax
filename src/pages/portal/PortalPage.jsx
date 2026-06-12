@@ -121,7 +121,7 @@ export function PortalPage() {
   const procesosFiltrados = filtrarProcesos(data.procesos, busqueda)
 
   return (
-    <div className="space-y-10">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-10">
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="text-center py-8 space-y-4">
         <div className="flex justify-center">
