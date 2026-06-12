@@ -275,10 +275,13 @@ function calcularResumen(eventos) {
  * Retorna eventos de auditorÃ­a filtrados por tenant (barrera primaria)
  * y luego por los filtros adicionales del usuario.
  */
+const MOCK_TENANT_ID = 'sanmiguel'
+
 export async function getEventosAuditoria(tenantId, filtros = {}) {
   await delay_ms(300)
+  const id = TODOS_ORDENADOS.some(ev => ev.tenant_id === tenantId) ? tenantId : MOCK_TENANT_ID
   // â”€â”€ BARRERA PRIMARIA: tenant_id â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const porTenant = TODOS_ORDENADOS.filter(ev => ev.tenant_id === tenantId)
+  const porTenant = TODOS_ORDENADOS.filter(ev => ev.tenant_id === id)
   const eventos   = aplicarFiltros(porTenant, filtros)
   const resumen   = calcularResumen(eventos)
   return { eventos, resumen }

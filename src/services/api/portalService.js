@@ -233,10 +233,13 @@ Acta N.Âº 35/2026 â€” Documento generado por INVERSA.Bid`,
  * Retorna los procesos visibles al ciudadano para el tenant indicado.
  * Doble filtro: tenant_id === tenantId AND estado IN [PUBLICADO, ADJUDICADO].
  */
+const MOCK_TENANT_ID = 'sanmiguel'
+
 export async function getProcesosPublicos(tenantId) {
   await delay_ms(280)
+  const id = _PROCESOS.some(p => p.tenantId === tenantId) ? tenantId : MOCK_TENANT_ID
   return _PROCESOS.filter(
-    p => p.tenantId === tenantId &&
+    p => p.tenantId === id &&
          (p.estado === ESTADO_PORTAL.PUBLICADO || p.estado === ESTADO_PORTAL.ADJUDICADO),
   )
 }
@@ -247,6 +250,7 @@ export async function getProcesosPublicos(tenantId) {
  */
 export async function getDocumentosPublicos(tenantId) {
   await delay_ms(200)
-  return _DOCUMENTOS.filter(d => d.tenantId === tenantId)
+  const id = _DOCUMENTOS.some(d => d.tenantId === tenantId) ? tenantId : MOCK_TENANT_ID
+  return _DOCUMENTOS.filter(d => d.tenantId === id)
 }
 
