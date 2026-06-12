@@ -1,65 +1,118 @@
-import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'
+import { createContext, useContext, useReducer, useEffect, useMemo } from 'react'
 import { ServerOff } from 'lucide-react'
 import { TENANTS, resolveTenantId } from '../config/tenants'
 
 const TenantContext = createContext(null)
 
-function applyTheme(theme) {
-  const root = document.documentElement
-  Object.entries(theme).forEach(([key, value]) => {
-    root.style.setProperty(key, value)
-  })
+// URL base de la API — resuelta en build time por Vite desde .env.production
+const API_BASE = import.meta.env.VITE_API_URL ?? '/api'
+
+// ── Capa de datos (fetch fuera del efecto — evita race conditions en StrictMode) ──
+
+async function cargarBranding(id) {
+  const res = await fetch(`${API_BASE}/tenants/${id}/branding`)
+  if (res.status === 404) return { ok: false, status: 404 }
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data = await res.json()
+  return { ok: true, data }
 }
 
-/** Error fatal: el subdominio no corresponde a ningún municipio registrado. */
+// ── Helpers DOM ───────────────────────────────────────────────────────────────
+
+function applyTheme(theme) {
+  const root = document.documentElement
+  Object.entries(theme).forEach(([key, value]) => root.style.setProperty(key, value))
+}
+
+function applyMeta(data) {
+  document.documentElement.classList.add('dark')
+  document.title = `SICST MAX — ${data.shortName}`
+  if (data.faviconUrl) {
+    const link = document.querySelector("link[rel~='icon']")
+    if (link) link.href = data.faviconUrl
+  }
+}
+
+// ── Reducer ───────────────────────────────────────────────────────────────────
+
+const initial = { tenant: null, tenantId: null, estado: 'cargando' }
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'CARGADO':      return { tenant: action.tenant, tenantId: action.tenantId, estado: 'ok' }
+    case 'NO_ENCONTRADO': return { ...state, tenantId: action.tenantId, estado: 'no_encontrado' }
+    default:             return state
+  }
+}
+
+// ── Pantallas de bloqueo (sin variables CSS del tenant — usan Tailwind base) ──
+
+function TenantLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#030712]">
+      <div className="w-8 h-8 rounded-full border-2 border-slate-700 border-t-cyan-400 animate-spin" />
+    </div>
+  )
+}
+
 function TenantNotFound({ tenantId }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#03070f] text-slate-200 px-6 text-center">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#030712] text-slate-200 px-6 text-center">
       <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30">
         <ServerOff className="w-10 h-10 text-red-400" />
       </div>
       <h1 className="text-xl font-bold">404 — Tenant No Encontrado</h1>
       <p className="text-sm text-slate-400 max-w-md">
         El municipio <span className="font-mono text-red-400">"{tenantId}"</span> no está
-        registrado en esta instancia de SICST MAX. Verifique la URL o contacte al administrador del sistema.
+        registrado en esta instancia de SICST MAX. Verificá la URL o contactá al administrador del sistema.
       </p>
     </div>
   )
 }
 
+// ── Provider ──────────────────────────────────────────────────────────────────
+
 export function TenantProvider({ children }) {
-  // El tenant se resuelve UNA vez al arranque, desde el subdominio.
-  const [tenantId, setTenantId] = useState(resolveTenantId)
-  const tenant = TENANTS[tenantId] ?? null
+  const [state, dispatch] = useReducer(reducer, initial)
 
   useEffect(() => {
-    if (!tenant) return
-    applyTheme(tenant.theme)
-    document.documentElement.classList.add('dark')
-    if (tenant.faviconUrl) {
-      const link = document.querySelector("link[rel~='icon']")
-      if (link) link.href = tenant.faviconUrl
-    }
-    document.title = `SICST MAX — ${tenant.shortName}`
-  }, [tenant])
+    let cancelado = false
+    const id = resolveTenantId()
 
-  // Solo para desarrollo: en producción el tenant lo fija el subdominio.
-  const switchTenant = useCallback((id) => {
-    if (!TENANTS[id]) return
-    localStorage.setItem('sicst_tenant_dev', id)
-    setTenantId(id)
+    cargarBranding(id)
+      .then(result => {
+        if (cancelado) return
+        if (!result.ok) { dispatch({ type: 'NO_ENCONTRADO', tenantId: id }); return }
+        applyTheme(result.data.theme)
+        applyMeta(result.data)
+        dispatch({ type: 'CARGADO', tenant: result.data, tenantId: id })
+      })
+      .catch(() => {
+        if (cancelado) return
+        // Fallback a config local — exclusivo para entorno de desarrollo
+        if (import.meta.env.DEV && TENANTS[id]) {
+          const local = TENANTS[id]
+          applyTheme(local.theme)
+          applyMeta(local)
+          dispatch({ type: 'CARGADO', tenant: local, tenantId: id })
+        } else {
+          dispatch({ type: 'NO_ENCONTRADO', tenantId: id })
+        }
+      })
+
+    return () => { cancelado = true }
   }, [])
 
-  // Memoizado: controla el theming Neon-Glass de toda la UI; un value inline
-  // re-renderizaría cada consumidor en cada render del provider.
+  // Memoizado: un value inline re-renderizaría cada consumidor en cada render del provider
   const value = useMemo(
-    () => ({ tenant, tenantId, switchTenant, availableTenants: TENANTS }),
-    [tenant, tenantId, switchTenant],
+    () => ({ tenant: state.tenant, tenantId: state.tenantId }),
+    [state.tenant, state.tenantId],
   )
 
-  if (!tenant) {
-    return <TenantNotFound tenantId={tenantId} />
-  }
+  // Directiva arquitectónica: bloquear el App Shell hasta que las variables
+  // CSS del tenant estén inyectadas en :root — evita FOUC
+  if (state.estado === 'cargando')     return <TenantLoader />
+  if (state.estado !== 'ok')           return <TenantNotFound tenantId={state.tenantId ?? '??'} />
 
   return (
     <TenantContext.Provider value={value}>
