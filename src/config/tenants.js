@@ -35,6 +35,34 @@ export const TENANTS = {
     },
   },
 
+  // Tenant de preview/demo público — accesible vía ?tenant=apuesta-bid o subdominio
+  'apuesta-bid': {
+    id:          'apuesta-bid',
+    name:        'INVERSA.Bid — Demo',
+    shortName:   'BID',
+    logoUrl:     null,
+    faviconUrl:  null,
+    theme: {
+      '--color-primary':   '107 225 227',  // #6be1e3 — ONE cyan
+      '--color-secondary': '225 123 215',  // #e17bd7 — ONE pink
+      '--color-accent':    '228 199 106',  // #e4c76a — ONE gold
+      '--color-success':   '74 222 128',
+      '--color-warning':   '250 204 21',
+      '--color-danger':    '248 113 113',
+      '--color-bg':        '26 24 29',     // #1a181d — ONE dark
+      '--color-surface':   '36 33 44',
+      '--color-border':    '68 64 80',
+      '--color-text':      '254 254 255',  // #fefeff
+      '--color-muted':     '164 168 192',  // #a4a8c0
+      '--font-display':    'Exo 2',
+      '--font-subtitle':   'Josefin Sans',
+      '--font-sans':       'Inter',
+      '--font-mono':       'JetBrains Mono',
+      '--radius-glass':    '1rem',
+      '--blur-glass':      '16px',
+    },
+  },
+
   'demo': {
     id:          'demo',
     name:        'Municipio Demo',
