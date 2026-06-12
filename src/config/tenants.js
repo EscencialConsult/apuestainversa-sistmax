@@ -5,8 +5,9 @@
  */
 
 export const TENANTS = {
-  'san-miguel-tucuman': {
-    id:          'san-miguel-tucuman',
+  // Tenant canónico: subdominio 'sanmiguel' en producción (sanmiguel.sicst.app)
+  'sanmiguel': {
+    id:          'sanmiguel',
     name:        'Municipio de San Miguel de Tucumán',
     shortName:   'SMT',
     logoUrl:     null, // ruta dinámica: /tenants/san-miguel-tucuman/logo.svg
@@ -57,7 +58,7 @@ export const TENANTS = {
   },
 }
 
-export const DEFAULT_TENANT_ID = 'san-miguel-tucuman'
+export const DEFAULT_TENANT_ID = 'sanmiguel'
 
 /**
  * Resolución oficial del tenant: por subdominio (ej. smt.sicst.app → "smt").
