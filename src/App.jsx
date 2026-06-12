@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { TenantProvider } from './contexts/TenantContext'
 import { AuthProvider } from './contexts/AuthContext'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
@@ -30,6 +30,7 @@ const AdjudicacionPage  = lazyPage(() => import('./pages/adjudicacion/Adjudicaci
 const AprobacionPage    = lazyPage(() => import('./pages/aprobacion/AprobacionPage'), 'AprobacionPage')
 const AuditoriaPage     = lazyPage(() => import('./pages/auditoria/AuditoriaPage'), 'AuditoriaPage')
 const PortalPage        = lazyPage(() => import('./pages/portal/PortalPage'), 'PortalPage')
+const HomePage          = lazyPage(() => import('./pages/home/HomePage'), 'HomePage')
 
 function PageLoader() {
   return (
@@ -59,15 +60,15 @@ export default function App() {
                 {/* Pública: login */}
                 <Route path="/login" element={<LoginPage />} />
 
-                {/* Portal ciudadano — acceso libre, sin inicio de sesión */}
+                {/* Home + Portal ciudadano — acceso libre, sin inicio de sesión */}
                 <Route element={<PublicLayout />}>
+                  <Route path="/" element={<HomePage />} />
                   <Route path="/portal" element={<PortalPage />} />
                 </Route>
 
                 {/* Privadas: requieren sesión; el rol se valida por ruta */}
                 <Route element={<ProtectedRoute />}>
                   <Route element={<DashboardLayout />}>
-                    <Route index element={<Navigate to="/dashboard" replace />} />
                     <Route path="/dashboard" element={<DashboardPage />} />
 
                     <Route path="/usuarios" element={<Guarded path="/usuarios"><UsuariosPage /></Guarded>} />
