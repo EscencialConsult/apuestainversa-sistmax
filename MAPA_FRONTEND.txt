@@ -1,0 +1,559 @@
+================================================================
+INVERSA.Bid — MAPA COMPLETO DEL FRONTEND
+Referencia rápida para el equipo técnico | Junio 2026
+================================================================
+
+Cómo leer este documento:
+  ARCHIVO                   → ruta relativa desde src/ (o raíz del proyecto)
+  QUÉ HACE                  → descripción en 1 línea
+  QUIÉN LO USA / RUTA       → página o contexto donde se usa
+
+Columnas del cuadro:
+  [ARCHIVO]  [TIPO]  [DESCRIPCIÓN]  [USADO EN / RUTA]
+
+
+================================================================
+■ PUNTO DE ENTRADA
+================================================================
+
+ARCHIVO                          TIPO        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+index.html                       HTML        Shell HTML. Carga fuentes Google (Exo 2,
+                                             Josefin Sans) y el script principal.
+src/main.jsx                     JSX         Punto de entrada React. Monta <App /> en
+                                             el div#root del index.html.
+src/App.jsx                      JSX         Router principal. Define todas las rutas,
+                                             lazy-loading de páginas y los dos layouts
+                                             (PublicLayout / DashboardLayout).
+
+
+================================================================
+■ CONFIGURACIÓN GLOBAL  →  src/config/
+================================================================
+
+ARCHIVO                          TIPO        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+config/tenants.js                JS          Define los tenants registrados (sanmiguel,
+                                             demo): colores ONE, fuentes, logo.
+                                             Fallback dev cuando la API no responde.
+                                             NUNCA hardcodear colores en otro archivo.
+
+config/roles.js                  JS          Constantes ROLES y ROLE_LABELS.
+                                             Fuente única de los 8 roles del sistema.
+
+config/navigation.js             JS          Árbol de navegación del sidebar +
+                                             función getAllowedRoles(path).
+                                             Controla qué rol puede ver cada ruta.
+
+
+================================================================
+■ CONTEXTOS GLOBALES  →  src/contexts/
+================================================================
+
+ARCHIVO                          TIPO        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+contexts/TenantContext.jsx       JSX         Carga el branding del tenant desde la API
+                                             e inyecta las variables CSS en <html>.
+                                             Expone: { tenant, tenantId }.
+                                             Bloquea el render hasta tener el branding.
+                                             En dev sin API: usa config/tenants.js.
+
+contexts/AuthContext.jsx         JSX         Gestiona la sesión del usuario.
+                                             Expone: { user, login, logout }.
+                                             user tiene: { id, name, email, role,
+                                             tenantId }. Login hoy es mock (fakeJwt).
+
+
+================================================================
+■ LAYOUTS  →  src/layouts/
+================================================================
+
+ARCHIVO                          TIPO        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+layouts/PublicLayout.jsx         JSX         Shell para rutas públicas (/, /portal).
+                                             Header con isotipo INVERSA.Bid + nombre
+                                             del municipio + logo ONE.
+                                             Footer con atribución ONE.
+                                             Sin sidebar. Las páginas controlan su
+                                             propio contenedor (full-bleed posible).
+
+layouts/DashboardLayout.jsx      JSX         Shell para rutas privadas (todo el back).
+                                             Sidebar colapsable + Navbar superior.
+                                             Outlet renderiza la página activa.
+
+
+================================================================
+■ COMPONENTES COMPARTIDOS  →  src/components/
+================================================================
+
+── auth/ ──────────────────────────────────────────────────────
+
+ARCHIVO                          TIPO        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+components/auth/
+  ProtectedRoute.jsx             JSX         Guard de rutas privadas. Verifica sesión
+                                             activa y rol permitido. Si no hay sesión
+                                             → /login. Si rol incorrecto → /unauthorized.
+
+── layout/ ────────────────────────────────────────────────────
+
+ARCHIVO                          TIPO        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+components/layout/
+  Sidebar.jsx                    JSX         Sidebar colapsable del dashboard. Muestra
+                                             logo INVERSA.Bid, nav por rol, info del
+                                             usuario y botón de colapsar.
+                                             Usa config/navigation.js para los ítems.
+
+  Navbar.jsx                     JSX         Barra superior del dashboard. Muestra el
+                                             nombre del municipio y acciones rápidas
+                                             (notificaciones, perfil, logout).
+
+── atoms/ ─────────────────────────────────────────────────────
+
+ARCHIVO                          TIPO        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+components/atoms/
+  BadgeEstado.jsx                JSX         Badge de color por estado de expediente
+                                             (PUBLICADO / ACTIVO / ADJUDICADO / etc.).
+                                             Usado en todas las tablas y tarjetas.
+
+  CardProceso.jsx                JSX         Tarjeta de expediente en la lista /compras.
+                                             Muestra estado, objeto, monto, fecha.
+
+  TablaAuditoria.jsx             JSX         Tabla paginada de eventos de auditoría.
+                                             Usada en AuditoriaPage.
+
+  WizardPasos.jsx                JSX         Indicador de pasos (1→2→3→N) para wizards.
+                                             Usado en NuevaCompraPage y NuevoProveedorPage.
+
+── ui/ ────────────────────────────────────────────────────────
+
+ARCHIVO                          TIPO        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+components/ui/
+  EmptyState.jsx                 JSX         Pantalla de estado vacío o parámetro
+                                             faltante. Con isMandatory={true} bloquea
+                                             el módulo hasta que el admin configure
+                                             el recurso requerido.
+
+  ErrorBoundary.jsx              JSX         Captura crashes de render en producción.
+                                             Muestra pantalla de error amigable con
+                                             botón de reintento. Loguea al console.
+
+  FormControls.jsx               JSX         Inputs, selects, textareas y labels
+                                             reutilizables con estilos tenant-aware.
+                                             Usados en todos los wizards y formularios.
+
+  ModulePlaceholder.jsx          JSX         Pantalla genérica "Módulo en desarrollo".
+                                             Para páginas aún no implementadas.
+
+
+================================================================
+■ HOOKS PERSONALIZADOS  →  src/hooks/
+================================================================
+
+ARCHIVO                          TIPO        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+hooks/useSidebar.js              JS          Gestiona el estado collapsed/expanded
+                                             del sidebar. Persiste en localStorage.
+                                             Usado en DashboardLayout.
+
+
+================================================================
+■ UTILIDADES  →  src/utils/
+================================================================
+
+ARCHIVO                          TIPO        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+utils/cn.js                      JS          Helper clsx + tailwind-merge.
+                                             cn('clase1', condicional && 'clase2').
+                                             Usado en prácticamente todos los JSX.
+
+utils/descargarTxt.js            JS          Descarga un string como archivo .txt
+                                             con BOM UTF-8 (compatible Word/Excel).
+                                             Usado en Adjudicación, Portal, Recepción.
+
+utils/fakeJwt.js                 JS          Genera un JWT falso para el mock de login.
+                                             Se elimina cuando el backend real esté listo.
+
+
+================================================================
+■ SERVICIOS / API  →  src/services/api/
+================================================================
+
+Todos los servicios son MOCK actualmente. Cada uno simula las
+respuestas que el backend real deberá implementar.
+El tenantId es SIEMPRE el primer filtro en cada función.
+
+ARCHIVO                          TIPO        QUÉ HACE / ENDPOINTS QUE SIMULAN
+─────────────────────────────    ────────    ──────────────────────────────────────────
+services/api/
+  apiClient.js                   JS          Instancia de Axios configurada.
+                                             Interceptor para inyectar Bearer token.
+                                             Base URL desde VITE_API_URL.
+
+  arcaService.js                 JS          GET /api/arca/verificar/:cuit
+                                             Verificación ARCA/AFIP de proveedores.
+                                             Simula timeout y modo contingencia.
+
+  catalogosService.js            JS          GET /api/:tenantId/config/modalidades
+                                             GET /api/:tenantId/config/rubros
+                                             Datos de configuración del municipio.
+
+  adjudicacionService.js         JS          GET plantillas de contrato y orden.
+                                             POST firmar etapa del circuito.
+                                             Genera texto de los documentos legales
+                                             con el nombre INVERSA.Bid.
+
+  aprobacionService.js           JS          GET jerarquías de aprobación.
+                                             GET/POST expedientes pendientes de firma.
+
+  auditoriaService.js            JS          GET /api/:tenantId/auditoria (con filtros)
+                                             POST evento externo (logEventoExterno).
+                                             Genera 50+ eventos mock con fechas reales.
+
+  expedienteService.js           JS          GET /api/:tenantId/compras/:id
+                                             Detalle completo del expediente (lances,
+                                             proveedores, aprobación, recepción).
+
+  portalService.js               JS          GET /portal/:tenantId/procesos (públicos)
+                                             GET /portal/:tenantId/documentos
+                                             Solo expone PUBLICADO y ADJUDICADO.
+
+  adjudicacionService.js         JS          (ver arriba)
+
+
+================================================================
+■ PÁGINAS POR DOMINIO  →  src/pages/
+================================================================
+
+
+── HOME Y PÚBLICA ──────────────────────────────────────────────
+Ruta raíz y portal ciudadano. Sin autenticación. PublicLayout.
+
+ARCHIVO                          RUTA        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+pages/home/
+  HomePage.jsx                   /           Landing page pública de INVERSA.Bid.
+                                             Hero full-viewport, bento grid de
+                                             funcionalidades, proceso en 5 pasos,
+                                             CTA al login y al portal ciudadano.
+
+pages/portal/
+  PortalPage.jsx                 /portal     Portal de transparencia ciudadana.
+                                             Buscador, grilla de procesos públicos
+                                             y descarga de documentos oficiales.
+
+  CardProcesoPublico.jsx         /portal     Tarjeta de un proceso público.
+                                             Variante PUBLICADO (fecha subasta) y
+                                             variante ADJUDICADO (ganador + ahorro).
+
+
+── AUTENTICACIÓN ───────────────────────────────────────────────
+Rutas públicas de acceso al sistema.
+
+ARCHIVO                          RUTA        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+pages/auth/
+  LoginPage.jsx                  /login      Formulario email + contraseña.
+                                             Selector de rol (dev-only, se elimina
+                                             con el backend real). Muestra branding
+                                             INVERSA.Bid + nombre del municipio.
+
+  UnauthorizedPage.jsx           /unauthorized  Pantalla 403. El usuario no tiene
+                                             el rol requerido para esa ruta.
+
+pages/NotFoundPage.jsx           *           Pantalla 404 genérica.
+
+
+── DASHBOARD ───────────────────────────────────────────────────
+Vista de bienvenida post-login. DashboardLayout.
+
+ARCHIVO                          RUTA        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+pages/dashboard/
+  DashboardPage.jsx              /dashboard  Resumen del estado del sistema.
+                                             Indicadores de procesos activos, subastas
+                                             y alertas, adaptados al rol del usuario.
+
+
+── USUARIOS ────────────────────────────────────────────────────
+Gestión de cuentas del municipio. Solo admin.
+
+ARCHIVO                          RUTA        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+pages/usuarios/
+  UsuariosPage.jsx               /usuarios   CRUD de usuarios del tenant.
+                                             Tabla con roles, estado y acciones.
+
+
+── PROVEEDORES ─────────────────────────────────────────────────
+Registro y verificación de proveedores. Admin + comprador.
+
+ARCHIVO                          RUTA        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+pages/proveedores/
+  ProveedoresPage.jsx            /proveedores  Lista de proveedores del municipio.
+                                             Filtros por rubro y estado habilitación.
+
+  NuevoProveedorPage.jsx         /proveedores/nuevo  Shell de la página. Carga el
+                                             wizard y pasa el estado al header.
+
+  ArcaPage.jsx                   /proveedores/arca  Placeholder — módulo de
+                                             verificación ARCA detallada (pendiente).
+
+  wizard/
+    NuevoProveedorWizard.jsx                 Orquestador del wizard de 4 pasos.
+                                             Usa wizardProveedorReducer para el estado.
+
+    wizardProveedorReducer.js                Reducer de estado del wizard de proveedor.
+                                             Acciones: SET_CAMPO, SIGUIENTE, ANTERIOR.
+
+    Paso1Fiscal.jsx                          Datos fiscales: razón social, CUIT,
+                                             domicilio, contacto.
+
+    Paso2Comercial.jsx                       Verificación ARCA/AFIP del CUIT.
+                                             Muestra formulario de contingencia si
+                                             la API cae (?arcaCaida demo flag).
+
+    Paso3Rubros.jsx                          Selección de rubros del proveedor.
+                                             Bloquea con EmptyState si no hay rubros
+                                             configurados (?sinRubros demo flag).
+
+    Paso4RevisionProveedor.jsx               Resumen final + confirmación de alta.
+
+
+── COMPRAS — WIZARD ────────────────────────────────────────────
+Creación de un nuevo expediente de compra. Comprador + admin.
+
+ARCHIVO                          RUTA        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+pages/compras/
+  ComprasPage.jsx                /compras    Lista de todos los expedientes del tenant.
+                                             Filtros y acceso a la vista maestra.
+
+  NuevaCompraPage.jsx            /compras/nueva  Shell de la página del wizard.
+
+  wizard/
+    NuevaCompraWizard.jsx                    Orquestador del wizard de 5 pasos.
+
+    wizardCompraReducer.js                   Reducer de estado del wizard de compra.
+
+    Paso1DatosGenerales.jsx                  Título, área, número de expediente,
+                                             descripción y justificación.
+
+    Paso2Especificaciones.jsx                Especificaciones técnicas, cantidades
+                                             y unidades de medida.
+
+    Paso3Modalidad.jsx                       Tipo de contratación (Licitación Pública,
+                                             Privada, Directa…). Bloquea si no hay
+                                             modalidades configuradas (?sinModalidades).
+
+    Paso4Participacion.jsx                   Selección de proveedores invitados.
+                                             Mínimo 3 para Licitación Pública.
+
+    Paso5Revision.jsx                        Resumen completo + botón de publicar.
+                                             Al confirmar el expediente pasa a PUBLICADO.
+
+
+── COMPRAS — VISTA MAESTRA ─────────────────────────────────────
+Dashboard de ciclo de vida de un expediente. Todos los roles.
+
+ARCHIVO                          RUTA        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+pages/compras/
+  DetalleCompraPage.jsx          /compras/:id  Shell con 5 tabs. Solo lectura para
+                                             todos (las acciones están en sus módulos).
+
+  expediente/
+    TabDatosGenerales.jsx        Tab 1       Estado, descripción, área, fechas,
+                                             presupuesto y especificaciones técnicas.
+
+    TabProveedores.jsx           Tab 2       Tabla de proveedores invitados con estado
+                                             por etapa (invitado → aprobado → adjudicado).
+
+    TabSubasta.jsx               Tab 3       Métricas de ahorro + historial de lances
+                                             en orden cronológico con variaciones.
+
+    TabAprobacion.jsx            Tab 4       TimelineAprobacion (readOnly) + VisorPlantillas
+                                             con los documentos generados.
+
+    TabRecepcion.jsx             Tab 5       Formulario de recepción de bienes o banner
+                                             de confirmación si ya fue registrada.
+                                             Bloquea si falta plantilla de acta
+                                             (?sinDocConformidad demo flag).
+
+
+── COMPRAS — TRADING ROOM ──────────────────────────────────────
+Subasta inversa en tiempo real. Proveedor / comprador / auditor.
+
+ARCHIVO                          RUTA        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+pages/compras/
+  TradingRoomPage.jsx            /compras/trading  Shell de la sala de subasta.
+                                             Carga el TradingRoom e inyecta el tenant.
+
+  trading/
+    TradingRoom.jsx                          Orquestador principal de la sala.
+                                             Compone todos los paneles según el rol.
+
+    useSubasta.js                            Hook de la subasta. Conecta el MockWebSocket,
+                                             gestiona el estado (lances, reloj, estado)
+                                             y expone acciones (enviarLance).
+
+    RelojCuentaRegresiva.jsx                 Reloj con cuenta regresiva. Activa la
+                                             extensión anti-sniper (+3 min si hay
+                                             lance en el último minuto).
+
+    PanelLance.jsx                           Input de oferta para el rol proveedor.
+                                             Valida que el monto sea menor al mínimo.
+
+    PanelOfertas.jsx                         Ranking de ofertas en tiempo real.
+                                             Comprador/auditor ven identidades.
+                                             Proveedor ve solo precios anonimizados.
+
+    CajaAhorro.jsx                           Widget que muestra el ahorro acumulado
+                                             en $ y % respecto al monto base.
+
+    ActaCierre.jsx                           Panel resumen al cierre de la subasta.
+                                             Muestra ganador, precio final y ahorro.
+
+
+── ADJUDICACIÓN ────────────────────────────────────────────────
+Post-subasta: firma del circuito y documentos legales. Comprador + admin.
+
+ARCHIVO                          RUTA        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+pages/adjudicacion/
+  AdjudicacionPage.jsx           /adjudicacion  Página principal. Compone el timeline
+                                             de firmas y el visor de plantillas.
+
+  adjudicacionReducer.js                     Reducer de estado de la página.
+                                             Maneja carga, firma y generación de docs.
+
+  TimelineAprobacion.jsx                     Circuito vertical de firmas.
+                                             Muestra cada etapa con su estado.
+                                             Con prop readOnly={true} es solo lectura
+                                             (reutilizado en TabAprobacion).
+                                             Observaciones obligatorias en rechazo.
+
+  VisorPlantillas.jsx                        Visor con dos tabs: Resolución de
+                                             Adjudicación + Orden de Compra.
+                                             Muestra variables del expediente ya
+                                             sustituidas. Botón de descarga .txt.
+                                             Bloquea si faltan plantillas del municipio.
+
+
+── APROBACIÓN ──────────────────────────────────────────────────
+Bandeja de tareas para autoridades firmantes. autoridad_aprobadora + admin.
+
+ARCHIVO                          RUTA        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+pages/aprobacion/
+  AprobacionPage.jsx             /aprobacion  Shell de layout de dos paneles.
+                                             Bloquea con EmptyState si no hay jerarquía
+                                             configurada (?sinJerarquias demo flag).
+
+  BandejaAprobaciones.jsx                    Panel izquierdo. Lista de expedientes
+                                             pendientes de firma para el usuario.
+                                             Cada tarjeta muestra prioridad, tiempo
+                                             transcurrido y % de ahorro.
+
+  DetalleAprobacion.jsx                      Panel derecho. Detalle del expediente
+                                             seleccionado: 4 métricas, ranking de
+                                             ofertas y TimelineAprobacion para firmar.
+
+
+── AUDITORÍA ───────────────────────────────────────────────────
+Bitácora inmutable de todos los eventos. Auditor + admin (solo lectura).
+
+ARCHIVO                          RUTA        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+pages/auditoria/
+  AuditoriaPage.jsx              /auditoria  Página principal. Carga eventos y compone
+                                             los filtros con la tabla.
+
+  FiltrosAuditoria.jsx                       Panel de filtros: fecha desde/hasta,
+                                             módulo, tipo de evento y búsqueda libre
+                                             con debounce 300ms.
+
+
+── DOCUMENTOS ──────────────────────────────────────────────────
+Repositorio documental del tenant. Pendiente de implementación.
+
+ARCHIVO                          RUTA        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+pages/documentos/
+  DocumentosPage.jsx             /documentos  Placeholder — módulo pendiente.
+                                             Mostrará ModulePlaceholder hasta
+                                             el próximo sprint.
+
+
+================================================================
+■ ARCHIVOS DE CONFIGURACIÓN / RAÍZ DEL PROYECTO
+================================================================
+
+ARCHIVO                          TIPO        QUÉ HACE
+─────────────────────────────    ────────    ──────────────────────────────────────────
+tailwind.config.js               JS          Extiende Tailwind con colores tenant-*
+                                             (leen variables CSS), fuentes display/
+                                             subtitle/sans/mono, sombras neon/glass
+                                             y animaciones del sistema.
+
+index.css                        CSS         Aplica @tailwind directives. Body usa
+                                             var(--font-sans) y var(--color-bg).
+
+vite.config.js                   JS          Config de Vite 8 con rolldown.
+                                             manualChunks como función (no objeto).
+
+package.json                     JSON        Dependencias: react 19, react-router v7,
+                                             tailwind v3, lucide-react, axios.
+
+public/imgone/                   ASSETS      Logos y el isotipo de ONE en .webp:
+                                             favicon (espiral), one-logocolor,
+                                             one-iconocolor, one-logoletra, etc.
+
+
+================================================================
+■ RESUMEN: ¿QUÉ ARCHIVO TOCAR SEGÚN LA TAREA?
+================================================================
+
+TAREA                                        ARCHIVO(S) CLAVE
+─────────────────────────────────────────    ──────────────────────────────────────────
+Cambiar colores / fuentes del tenant         config/tenants.js
+Cambiar qué roles acceden a qué ruta         config/navigation.js
+Agregar un nuevo ítem al sidebar             config/navigation.js
+Agregar una nueva ruta/página                App.jsx  +  crear pages/dominio/Página.jsx
+Modificar el header/footer público           layouts/PublicLayout.jsx
+Modificar sidebar o navbar del back          components/layout/Sidebar.jsx  |  Navbar.jsx
+Conectar login al backend real               pages/auth/LoginPage.jsx  +  contexts/AuthContext.jsx
+Conectar cualquier servicio al backend       services/api/<servicio>.js
+Modificar la lógica de la subasta            pages/compras/trading/useSubasta.js
+Modificar un paso del wizard de compra       pages/compras/wizard/Paso<N>*.jsx
+Modificar un paso del wizard de proveedor    pages/proveedores/wizard/Paso<N>*.jsx
+Agregar un tab a la vista maestra            pages/compras/expediente/Tab<Nombre>.jsx
+Cambiar el flujo de firmas                   pages/adjudicacion/TimelineAprobacion.jsx
+Cambiar texto de documentos legales          services/api/adjudicacionService.js  |  portalService.js
+Cambiar el portal ciudadano                  pages/portal/PortalPage.jsx  +  CardProcesoPublico.jsx
+Cambiar la landing page pública              pages/home/HomePage.jsx
+Descargar archivos .txt                      utils/descargarTxt.js
+Manejar errores globales                     components/ui/ErrorBoundary.jsx
+
+
+================================================================
+■ MAPA DE DEPENDENCIAS CLAVE
+================================================================
+
+  TenantContext  ←── todos los componentes que muestran colores o nombre del municipio
+  AuthContext    ←── ProtectedRoute, Sidebar, Navbar, todos los servicios
+  config/navigation.js  ←── Sidebar, ProtectedRoute, App.jsx
+  config/tenants.js     ←── TenantContext (fallback dev)
+  utils/cn.js           ←── prácticamente todos los JSX
+  components/ui/EmptyState.jsx  ←── wizards, Adjudicación, Aprobación, Recepción
+  components/atoms/BadgeEstado.jsx  ←── ComprasPage, CardProceso, TabDatosGenerales
+
+
+================================================================
+FIN DEL MAPA — INVERSA.Bid v1.0.0-rc2
+================================================================
