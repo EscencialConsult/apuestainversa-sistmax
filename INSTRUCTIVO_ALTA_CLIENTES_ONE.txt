@@ -1,0 +1,344 @@
+================================================================
+INVERSA.Bid — INSTRUCTIVO: ALTA DE NUEVOS CLIENTES
+Panel de Operador ONE | Uso interno exclusivo
+Versión: 1.0 | Junio 2026
+================================================================
+
+Este documento explica cómo ONE da de alta a un nuevo municipio
+(cliente) en la plataforma INVERSA.Bid. Está dirigido al equipo
+técnico y comercial de ONE, no al cliente final.
+
+
+================================================================
+1. CONCEPTO: QUÉ ES UN "TENANT"
+================================================================
+
+La plataforma INVERSA.Bid es multi-tenant: un único sistema que
+sirve a múltiples municipios de forma completamente aislada.
+
+Cada municipio que compra el producto es un "tenant":
+  - Tiene sus propios usuarios, proveedores y expedientes.
+  - Ve sus propios colores, logo y nombre de municipio.
+  - Sus datos NUNCA se mezclan con los de otro municipio.
+  - Funciona sobre exactamente el mismo código fuente.
+
+Desde el navegador, el municipio accede a su instancia por
+subdominio o por URL configurada:
+  sanmiguel.inversabid.app  →  Municipio de San Miguel de Tucumán
+  cordoba.inversabid.app    →  Municipio de Córdoba Capital
+  (etc.)
+
+ONE no necesita redesplegar ni modificar el código para activar
+un nuevo cliente. Solo necesita registrarlo en la base de datos.
+
+
+================================================================
+2. DOS MODELOS DE DESPLIEGUE
+================================================================
+
+─────────────────────────────────────────────────────────────────
+MODELO A — ON-PREMISE (actual, cliente SMT)
+─────────────────────────────────────────────────────────────────
+
+El municipio instala el sistema en SUS servidores físicos.
+ONE entrega el software empaquetado (build de producción + BD).
+
+  ┌─────────────────────────────────────────────────────────┐
+  │  Servidores del Municipio de San Miguel de Tucumán      │
+  │  ┌──────────────────┐   ┌──────────────────────────┐   │
+  │  │  Frontend (IIS)  │   │  Backend (API) + Base DB  │   │
+  │  │  dist/           │   │  TenantProfile (1 fila)   │   │
+  │  └──────────────────┘   └──────────────────────────┘   │
+  └─────────────────────────────────────────────────────────┘
+
+En este modelo:
+  - Hay UN SOLO tenant registrado en la DB (el municipio dueño).
+  - El alta se hace con un INSERT SQL ejecutado por ONE al
+    configurar el servidor por primera vez.
+  - No hay interfaz gráfica de ONE para gestionar esto.
+  - Cada nuevo cliente on-premise = nueva instalación separada.
+
+─────────────────────────────────────────────────────────────────
+MODELO B — CLOUD MULTI-MUNICIPIO (Fase 2, próximo desarrollo)
+─────────────────────────────────────────────────────────────────
+
+ONE hostea el sistema centralizado en la nube.
+Múltiples municipios comparten la infraestructura.
+
+  ┌─────────────────────────────────────────────────────────┐
+  │  Servidores de ONE (cloud)                              │
+  │  ┌──────────────────────────────────────────────────┐  │
+  │  │  Frontend INVERSA.Bid                            │  │
+  │  │  Backend API                                     │  │
+  │  │  Base de datos                                   │  │
+  │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐         │  │
+  │  │  │ tenant A │ │ tenant B │ │ tenant C │  ...     │  │
+  │  │  └──────────┘ └──────────┘ └──────────┘         │  │
+  │  └──────────────────────────────────────────────────┘  │
+  └─────────────────────────────────────────────────────────┘
+
+En este modelo:
+  - ONE gestiona TODOS los clientes desde un panel central.
+  - La "ONE Operator Console" (a desarrollar en Fase 2) permitirá
+    dar de alta municipios sin tocar la base de datos.
+  - Los datos de cada municipio siguen siendo completamente
+    aislados entre sí aunque compartan la misma BD.
+
+
+================================================================
+3. CÓMO DAR DE ALTA UN CLIENTE (HOY — MODELO ON-PREMISE)
+================================================================
+
+Secuencia de 6 pasos. Los pasos 1-4 los ejecuta ONE al configurar
+el servidor del cliente. El paso 5 lo verifica ONE remotamente.
+El paso 6 lo hace el administrador del municipio.
+
+─────────────────────────────────────────────────────────────────
+PASO 1 — EJECUTAR EL INSERT EN LA BASE DE DATOS
+─────────────────────────────────────────────────────────────────
+
+Conectarse a la base de datos del servidor del municipio y
+ejecutar el INSERT de la tabla TenantProfile.
+
+Ver la PLANTILLA SQL COMPLETA en la Sección 5 de este documento.
+Personalizar los campos marcados con <MAYÚSCULAS>.
+
+─────────────────────────────────────────────────────────────────
+PASO 2 — SUBIR EL LOGO DEL MUNICIPIO
+─────────────────────────────────────────────────────────────────
+
+Subir el logo al servidor en la ruta indicada en logo_url:
+
+  Ubicación recomendada:  /tenants/<id>/logo.svg
+  Formato:                SVG (vectorial, sin pérdida)
+                          o WebP si no tienen SVG disponible
+  Tamaño máximo:          200 KB
+
+Si el municipio no tiene logo disponible:
+  → Dejar logo_url = NULL en el INSERT
+  → El header mostrará las iniciales del shortName automáticamente
+
+─────────────────────────────────────────────────────────────────
+PASO 3 — CONFIGURAR EL SUBDOMINIO (solo modelo cloud)
+─────────────────────────────────────────────────────────────────
+
+En modelo on-premise este paso no aplica: el municipio accede
+directamente por su propia URL o IP.
+
+En modelo cloud (Fase 2):
+  Agregar registro DNS: nuevomuni.inversabid.app → IP del servidor
+  (Si hay wildcard *.inversabid.app configurado, es automático)
+
+─────────────────────────────────────────────────────────────────
+PASO 4 — CREAR LOS USUARIOS INICIALES
+─────────────────────────────────────────────────────────────────
+
+Insertar en la tabla de usuarios del tenant:
+  - 1 usuario con rol "admin" (el responsable de TI del municipio)
+  - Opcionalmente: usuarios de prueba para capacitación
+
+El admin podrá crear el resto de los usuarios desde la UI
+una vez que el sistema esté operativo.
+
+─────────────────────────────────────────────────────────────────
+PASO 5 — VERIFICAR EL ACCESO
+─────────────────────────────────────────────────────────────────
+
+Abrir el sistema en el navegador y verificar:
+
+  □ La aplicación carga con los colores del municipio
+  □ El logo aparece en el header (o las iniciales si logo_url=NULL)
+  □ El título del tab del navegador muestra "INVERSA.Bid — <siglas>"
+  □ El login acepta las credenciales del usuario admin creado
+  □ Al ingresar, el nombre del municipio aparece correctamente
+
+En caso de error 404 o pantalla fatal:
+  → Verificar que tenant_id en la DB coincide exactamente con
+    el subdominio o con el parámetro ?tenant= en la URL
+  → Verificar que el endpoint GET /api/tenants/:id/branding
+    retorna el JSON correcto para ese tenant_id
+
+─────────────────────────────────────────────────────────────────
+PASO 6 — CONFIGURACIÓN INICIAL POR EL ADMINISTRADOR DEL MUNICIPIO
+─────────────────────────────────────────────────────────────────
+
+El administrador del municipio debe configurar estos parámetros
+desde su cuenta antes de que el equipo pueda operar:
+
+  □ Modalidades de contratación habilitadas
+    (Licitación Pública, Licitación Privada, Contratación Directa…)
+    Sin esto: el Wizard de Compra queda bloqueado en Paso 3.
+
+  □ Jerarquía de aprobaciones (quién firma y en qué orden)
+    Sin esto: el módulo de Aprobación queda completamente bloqueado.
+
+  □ Plantilla oficial de Resolución de Adjudicación
+    Sin esto: el Visor de plantillas en Adjudicación queda bloqueado.
+
+  □ Plantilla oficial de Orden de Compra
+    Sin esto: ídem anterior, tab de Orden de Compra bloqueado.
+
+  □ Plantilla del Acta de Recepción Conforme
+    Sin esto: el formulario de Recepción de Bienes queda bloqueado.
+
+Estas plantillas contienen variables que el sistema reemplaza
+automáticamente con los datos de cada expediente (nombre del
+ganador, monto, fechas, número de resolución, etc.).
+
+
+================================================================
+4. CÓMO DAR DE ALTA UN CLIENTE (FASE 2 — MODELO CLOUD)
+================================================================
+
+NOTA: La "ONE Operator Console" es un desarrollo pendiente.
+Esta sección describe el flujo PREVISTO una vez que exista.
+
+  1. Ingresar a console.inversabid.app con credenciales de ONE.
+
+  2. Clic en "Nuevo Cliente" e ingresar:
+       - Nombre completo del municipio
+       - Siglas (shortName, ej: "SMT", "CBA", "ROS")
+       - Subdominio deseado (ej: "rosario")
+       - Email del administrador inicial
+
+  3. Usar el Configurador Visual para definir la identidad:
+       - Cargar logo del municipio (drag & drop)
+       - Seleccionar colores con el color picker:
+           · Color principal (recomendado: cyan ONE #6be1e3)
+           · Color secundario
+           · Color de acento
+           · Colores de fondo y superficie
+       - La previsualización muestra en tiempo real cómo quedará
+         el sistema para ese municipio.
+
+  4. Confirmar. El sistema:
+       - Inserta el registro en TenantProfile automáticamente
+       - Configura el subdominio DNS
+       - Envía email de bienvenida al administrador
+
+  5. El municipio está operativo. El administrador recibe su
+     contraseña y puede empezar la configuración (Paso 6 anterior).
+
+
+================================================================
+5. PLANTILLA SQL PARA ALTA DE TENANT (MODELO ON-PREMISE)
+================================================================
+
+Copiar y adaptar este INSERT para dar de alta cada nuevo cliente.
+Reemplazar todos los valores entre <MAYÚSCULAS>.
+
+─────────────────────────────────────────────────────────────────
+-- Alta del tenant en TenantProfile
+INSERT INTO TenantProfile (
+  tenant_id,
+  name,
+  short_name,
+  logo_url,
+  favicon_url,
+  theme,
+  created_at,
+  active
+) VALUES (
+  '<id-corto>',                         -- ej: 'sanmiguel', 'cordoba'
+  '<Nombre Completo del Municipio>',    -- ej: 'Municipio de Córdoba'
+  '<SIGLAS>',                           -- ej: 'CBA' (max 5 chars)
+  '/tenants/<id-corto>/logo.svg',       -- o NULL si no hay logo
+  NULL,
+  '{
+    "--color-primary":   "<R G B>",
+    "--color-secondary": "<R G B>",
+    "--color-accent":    "<R G B>",
+    "--color-success":   "74 222 128",
+    "--color-warning":   "250 204 21",
+    "--color-danger":    "248 113 113",
+    "--color-bg":        "<R G B>",
+    "--color-surface":   "<R G B>",
+    "--color-border":    "<R G B>",
+    "--color-text":      "254 254 255",
+    "--color-muted":     "164 168 192",
+    "--font-display":    "Exo 2",
+    "--font-subtitle":   "Josefin Sans",
+    "--font-sans":       "Inter",
+    "--font-mono":       "JetBrains Mono",
+    "--radius-glass":    "1rem",
+    "--blur-glass":      "16px"
+  }',
+  NOW(),
+  true
+);
+─────────────────────────────────────────────────────────────────
+
+NOTAS SOBRE EL CAMPO THEME:
+
+  - Todos los valores de color son "R G B" en decimal, sin comas
+    ni símbolo #. Ejemplo: el color #6be1e3 se escribe "107 225 227".
+  - Los colores de success/warning/danger/text/muted son estándar
+    ONE y generalmente no se cambian entre clientes.
+  - Los colores que varían por cliente son: primary, secondary,
+    accent, bg, surface y border.
+  - Las fuentes son el nombre exacto de Google Fonts. Si el cliente
+    quiere otra fuente, debe estar disponible en Google Fonts.
+
+PALETA BASE ONE (para usar si el cliente no tiene identidad propia):
+  primary:   "107 225 227"   (#6be1e3 — cyan ONE)
+  secondary: "225 123 215"   (#e17bd7 — magenta ONE)
+  accent:    "228 199 106"   (#e4c76a — gold ONE)
+  bg:        "26 24 29"      (#1a181d — fondo oscuro ONE)
+  surface:   "36 33 44"      (superficies con tinte púrpura)
+  border:    "68 64 80"      (bordes visibles pero sutiles)
+
+
+================================================================
+6. REFERENCIA RÁPIDA: CONVERSIÓN # → "R G B"
+================================================================
+
+Si el cliente entrega sus colores en formato hexadecimal (#RRGGBB),
+convertirlos a "R G B" decimal antes de insertarlos en la DB.
+
+Ejemplos de la paleta ONE:
+  #000000 → "0 0 0"
+  #1a181d → "26 24 29"
+  #fefeff → "254 254 255"
+  #e17bd7 → "225 123 215"
+  #6be1e3 → "107 225 227"
+  #e4c76a → "228 199 106"
+  #a4a8c0 → "164 168 192"
+  #c6c9d7 → "198 201 215"
+
+Herramienta online: https://www.rapidtables.com/convert/color/hex-to-rgb.html
+O en Python:  int('6b', 16) → 107
+
+
+================================================================
+7. PREGUNTAS FRECUENTES INTERNAS
+================================================================
+
+P: ¿Hace falta redesplegar el frontend cuando se agrega un cliente?
+R: NO. El frontend lee el branding de la API en cada carga.
+   Basta con el INSERT en la DB.
+
+P: ¿Puede haber dos tenants en el mismo servidor on-premise?
+R: Técnicamente sí (el código lo soporta). Pero en el modelo
+   on-premise actual cada servidor es de un solo municipio,
+   así que en la práctica hay un solo tenant por instalación.
+
+P: ¿Qué pasa si la API no responde al cargar el branding?
+R: En producción: pantalla fatal (error 404/500 visible al usuario).
+   En desarrollo: cae al config local de tenants.js automáticamente.
+
+P: ¿Un cliente puede cambiar sus propios colores?
+R: No desde la UI actual (v1.0). Los colores los gestiona ONE
+   actualizando el campo theme en la DB. En la Fase 2 el
+   administrador podrá hacerlo desde la consola de ONE.
+
+P: ¿Cómo pruebo el branding de un nuevo tenant localmente?
+R: Agregar el ID del nuevo tenant en src/config/tenants.js
+   (dev-only), luego acceder con ?tenant=<id> en localhost.
+   O configurar el backend local para que devuelva ese tenant.
+
+
+================================================================
+FIN DEL INSTRUCTIVO — INVERSA.Bid v1.0
+Producto de ONE — Escencial Consultoría
+Para uso interno del equipo técnico y comercial de ONE.
+================================================================

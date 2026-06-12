@@ -16,53 +16,49 @@ const PASOS = [
   'Acta de recepción conforme',
 ]
 
-// 6 features para el bento grid — distintos col-span para romper la grilla idéntica
 const BENTO = [
   {
     cols: 'sm:col-span-2',
     icon: Zap,
     titulo: 'Subasta inversa en tiempo real',
-    desc:  'Motor de licitaciones con reloj regresivo y mecanismo anti-sniper. Las ofertas llegan vía WebSocket sin recarga de página. La sesión se extiende automáticamente ante posturas de último segundo.',
+    desc: 'Motor de licitaciones con reloj regresivo y mecanismo anti-sniper. Las ofertas llegan vía WebSocket sin recarga de página. La sesión se extiende automáticamente ante posturas de último segundo.',
     featured: true,
   },
   {
     cols: 'sm:col-span-1',
     icon: Globe,
     titulo: 'Portal ciudadano',
-    desc:  'Adjudicaciones y documentos accesibles sin cuenta de usuario.',
-    featured: false,
+    desc: 'Adjudicaciones y documentos accesibles sin cuenta de usuario.',
     accent: true,
   },
   {
     cols: 'sm:col-span-1',
     icon: FileText,
     titulo: 'Documentación automática',
-    desc:  'Resoluciones y OC generadas con los datos reales de cada expediente.',
-    featured: false,
+    desc: 'Resoluciones y OC generadas con los datos reales de cada expediente.',
   },
   {
     cols: 'sm:col-span-1',
     icon: ShieldCheck,
     titulo: 'Auditoría inmutable',
-    desc:  'Bitácora que ningún operador puede editar ni borrar.',
-    featured: false,
+    desc: 'Bitácora que ningún operador puede editar ni borrar.',
   },
   {
     cols: 'sm:col-span-1',
     icon: Users,
     titulo: 'Multi-rol (8 perfiles)',
-    desc:  'Cada actor accede exactamente a lo que le corresponde por normativa.',
-    featured: false,
+    desc: 'Cada actor accede exactamente a lo que le corresponde por normativa.',
   },
 ]
 
-// ── Sub-componentes de módulo ──────────────────────────────────────────────────
+// ── BentoCell ──────────────────────────────────────────────────────────────────
 
 function BentoCell({ icon: Icon, titulo, desc, featured, accent }) {
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-xl border p-5 flex flex-col gap-3 transition-colors',
+        'relative overflow-hidden rounded-2xl border flex flex-col gap-4 transition-colors',
+        featured ? 'p-8 sm:p-10' : 'p-6',
         featured
           ? 'border-[rgb(var(--color-primary)/0.3)] bg-[rgb(var(--color-primary)/0.07)] hover:border-[rgb(var(--color-primary)/0.45)]'
           : accent
@@ -70,20 +66,16 @@ function BentoCell({ icon: Icon, titulo, desc, featured, accent }) {
             : 'border-[rgb(var(--color-border)/0.6)] bg-[rgb(var(--color-surface)/0.5)] hover:border-[rgb(var(--color-border))]',
       )}
     >
-      {/* Background icon for featured cell */}
       {featured && (
-        <div
-          className="absolute -bottom-6 -right-6 pointer-events-none"
-          aria-hidden="true"
-          style={{ color: 'rgb(var(--color-primary) / 0.06)' }}
-        >
-          <Icon className="w-40 h-40" />
+        <div className="absolute -bottom-10 -right-10 pointer-events-none" aria-hidden="true">
+          <Icon className="w-56 h-56" style={{ color: 'rgb(var(--color-primary) / 0.04)' }} />
         </div>
       )}
 
       <div
         className={cn(
-          'w-fit p-2.5 rounded-lg border',
+          'w-fit rounded-xl border',
+          featured ? 'p-3.5' : 'p-3',
           featured
             ? 'bg-[rgb(var(--color-primary)/0.15)] border-[rgb(var(--color-primary)/0.3)]'
             : accent
@@ -92,9 +84,7 @@ function BentoCell({ icon: Icon, titulo, desc, featured, accent }) {
         )}
       >
         <Icon
-          className={cn(
-            featured ? 'w-5 h-5' : 'w-4 h-4',
-          )}
+          className={featured ? 'w-7 h-7' : 'w-5 h-5'}
           style={{
             color: featured
               ? 'rgb(var(--color-primary))'
@@ -106,20 +96,17 @@ function BentoCell({ icon: Icon, titulo, desc, featured, accent }) {
         />
       </div>
 
-      <div className="relative space-y-1.5">
+      <div className="relative space-y-2">
         <p
           className={cn(
             'font-bold text-balance',
-            featured ? 'text-base' : 'text-sm',
+            featured ? 'text-xl font-display' : 'text-base',
           )}
           style={{ color: 'rgb(var(--color-text))' }}
         >
           {titulo}
         </p>
-        <p
-          className={featured ? 'text-[12px] leading-relaxed' : 'text-[11px] leading-relaxed'}
-          style={{ color: 'rgb(var(--color-muted))' }}
-        >
+        <p className="text-sm leading-relaxed" style={{ color: 'rgb(var(--color-muted))' }}>
           {desc}
         </p>
       </div>
@@ -135,156 +122,141 @@ export function HomePage() {
   return (
     <>
       {/* ═══════════════════════════════════════════════════════════════════════
-          HERO — full-width, full-viewport-height, ambient glow
+          HERO
       ═══════════════════════════════════════════════════════════════════════ */}
       <section
         className="relative overflow-hidden flex flex-col items-center justify-center text-center"
-        style={{ minHeight: 'calc(100vh - 3.5rem)', padding: '5rem 1.5rem 4rem' }}
+        style={{ minHeight: 'calc(100vh - 4rem)', padding: '5rem 1.5rem 5rem' }}
       >
-        {/* ── Background effects ── */}
+        {/* Fondo */}
         <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-          {/* Dot grid */}
           <div
             className="absolute inset-0"
             style={{
-              backgroundImage: 'radial-gradient(circle, rgb(var(--color-text) / 0.04) 1px, transparent 1px)',
+              backgroundImage: 'radial-gradient(circle, rgb(var(--color-text) / 0.05) 1px, transparent 1px)',
               backgroundSize: '28px 28px',
             }}
           />
-          {/* Primary glow — centered top */}
           <div
             className="absolute inset-0"
             style={{
-              background: 'radial-gradient(ellipse 110% 65% at 50% -5%, rgb(var(--color-primary) / 0.17) 0%, transparent 65%)',
+              background: 'radial-gradient(ellipse 110% 65% at 50% -5%, rgb(var(--color-primary) / 0.20) 0%, transparent 62%)',
             }}
           />
-          {/* Secondary glow — right */}
           <div
-            className="absolute top-1/4 -right-32 w-80 h-80 rounded-full blur-[100px]"
-            style={{ background: 'rgb(var(--color-secondary) / 0.14)' }}
+            className="absolute top-1/4 -right-32 w-96 h-96 rounded-full blur-[110px]"
+            style={{ background: 'rgb(var(--color-secondary) / 0.16)' }}
           />
-          {/* Accent glow — lower left */}
           <div
-            className="absolute bottom-1/4 -left-24 w-72 h-72 rounded-full blur-[90px]"
-            style={{ background: 'rgb(var(--color-accent) / 0.1)' }}
+            className="absolute bottom-1/4 -left-24 w-80 h-80 rounded-full blur-[90px]"
+            style={{ background: 'rgb(var(--color-accent) / 0.11)' }}
           />
         </div>
 
-        {/* ── Content ── */}
-        <div className="relative z-10 flex flex-col items-center gap-7 max-w-3xl mx-auto w-full">
+        {/* Contenido */}
+        <div className="relative z-10 flex flex-col items-center gap-8 max-w-3xl mx-auto w-full">
 
-          {/* ONE brand mark */}
+          {/* Logo ONE — protagonista */}
           <img
             src="/imgone/one-logocolor-convertido-de-png.webp"
             alt="ONE"
-            className="h-11 w-auto"
+            className="h-16 sm:h-20 w-auto"
           />
 
-          {/* Main headline */}
-          <div className="space-y-4">
+          {/* Headline principal */}
+          <div className="space-y-5">
             <h1
-              className="font-black text-white leading-none"
+              className="font-display font-black text-white leading-none"
               style={{
-                fontSize: 'clamp(4rem, 12vw, 7.5rem)',
-                letterSpacing: '-0.02em',
+                fontSize: 'clamp(5rem, 14vw, 10rem)',
+                letterSpacing: '-0.025em',
                 textShadow:
-                  '0 0 50px rgb(var(--color-primary) / 0.75), 0 0 120px rgb(var(--color-primary) / 0.35)',
+                  '0 0 60px rgb(var(--color-primary) / 0.80), 0 0 140px rgb(var(--color-primary) / 0.38)',
               }}
             >
-              SICST MAX
+              INVERSA.Bid
             </h1>
             <p
-              className="text-lg sm:text-xl font-semibold text-balance"
+              className="font-subtitle text-xl sm:text-2xl font-semibold text-balance"
               style={{ color: 'rgb(var(--color-text))' }}
             >
               Sistema Integral de Compras y Subastas Transparentes
             </p>
             <p
-              className="text-sm leading-relaxed"
+              className="text-base leading-relaxed"
               style={{ color: 'rgb(var(--color-muted))' }}
             >
               Plataforma oficial de licitaciones públicas de{' '}
-              <span
-                className="font-semibold"
-                style={{ color: 'rgb(var(--color-text))' }}
-              >
+              <span className="font-semibold" style={{ color: 'rgb(var(--color-text))' }}>
                 {tenant?.name ?? 'este municipio'}
               </span>
             </p>
           </div>
 
           {/* CTAs */}
-          <div className="flex items-center justify-center gap-3 flex-wrap">
+          <div className="flex items-center justify-center gap-4 flex-wrap">
             <Link
               to="/login"
               className={cn(
-                'inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl',
-                'text-sm font-bold transition-colors',
-                'border shadow-neon',
-                'hover:opacity-90',
-                'focus-visible:outline-none focus-visible:ring-2',
+                'inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl',
+                'text-base font-bold transition-all hover:opacity-90',
+                'border focus-visible:outline-none focus-visible:ring-2',
               )}
               style={{
                 background: 'rgb(var(--color-primary) / 0.18)',
-                borderColor: 'rgb(var(--color-primary) / 0.55)',
+                borderColor: 'rgb(var(--color-primary) / 0.5)',
                 color: 'rgb(var(--color-primary))',
+                boxShadow: '0 0 24px rgb(var(--color-primary) / 0.2)',
               }}
             >
-              <LogIn className="w-4 h-4" aria-hidden="true" />
+              <LogIn className="w-5 h-5" aria-hidden="true" />
               Ingresar al Sistema
-              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
             </Link>
             <Link
               to="/portal"
               className={cn(
-                'inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl',
-                'text-sm font-bold transition-colors',
-                'border',
-                'hover:opacity-80',
-                'focus-visible:outline-none focus-visible:ring-2',
+                'inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl',
+                'text-base font-bold transition-all hover:opacity-80',
+                'border focus-visible:outline-none focus-visible:ring-2',
               )}
               style={{
                 background: 'rgb(var(--color-surface) / 0.6)',
-                borderColor: 'rgb(var(--color-border) / 0.7)',
+                borderColor: 'rgb(var(--color-border) / 0.8)',
                 color: 'rgb(var(--color-muted))',
               }}
             >
-              <Globe className="w-4 h-4" aria-hidden="true" />
+              <Globe className="w-5 h-5" aria-hidden="true" />
               Portal Ciudadano
             </Link>
           </div>
 
         </div>
 
-        {/* Fade-to-bg at bottom edge */}
+        {/* Fade-to-bg en el borde inferior */}
         <div
-          className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none"
-          style={{
-            background: 'linear-gradient(to bottom, transparent, rgb(var(--color-bg)))',
-          }}
+          className="absolute bottom-0 left-0 right-0 h-28 pointer-events-none"
+          style={{ background: 'linear-gradient(to bottom, transparent, rgb(var(--color-bg)))' }}
           aria-hidden="true"
         />
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          RESTO — contenedor centrado
+          CONTENIDO — contenedor centrado
       ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-20 space-y-20">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pb-24 space-y-24">
 
         {/* ── SOBRE EL SISTEMA ── */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
-          <div className="space-y-4">
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+          <div className="space-y-5">
             <h2
-              className="text-2xl font-bold text-balance"
+              className="text-3xl sm:text-4xl font-display font-bold text-balance leading-tight"
               style={{ color: 'rgb(var(--color-text))' }}
             >
               Digitalización integral del gasto público
             </h2>
-            <p
-              className="text-sm leading-relaxed"
-              style={{ color: 'rgb(var(--color-muted))' }}
-            >
-              SICST MAX conecta todos los actores del proceso licitatorio en una única
+            <p className="text-base leading-relaxed" style={{ color: 'rgb(var(--color-muted))' }}>
+              INVERSA.Bid conecta todos los actores del proceso licitatorio en una única
               plataforma: proveedores verificados ante ARCA/AFIP, compradores municipales,
               evaluadores, autoridades aprobadoras y ciudadanos. Cada expediente avanza
               por un flujo normado, auditable y sin papel.
@@ -293,7 +265,7 @@ export function HomePage() {
 
           <div>
             <p
-              className="text-[10px] font-bold uppercase tracking-widest mb-4"
+              className="text-xs font-bold uppercase tracking-widest mb-5"
               style={{ color: 'rgb(var(--color-muted))' }}
             >
               Flujo del proceso
@@ -302,24 +274,21 @@ export function HomePage() {
               {PASOS.map((paso, i) => (
                 <li
                   key={paso}
-                  className="flex items-center gap-3 py-3 border-b last:border-0"
-                  style={{ borderColor: 'rgb(var(--color-border) / 0.3)' }}
+                  className="flex items-center gap-4 py-3.5 border-b last:border-0"
+                  style={{ borderColor: 'rgb(var(--color-border) / 0.35)' }}
                 >
                   <span
-                    className="text-[11px] font-black w-5 flex-shrink-0 tabular-nums"
+                    className="text-sm font-black w-6 flex-shrink-0 tabular-nums"
                     style={{ color: 'rgb(var(--color-primary))' }}
                   >
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  <span
-                    className="text-sm"
-                    style={{ color: 'rgb(var(--color-text))' }}
-                  >
+                  <span className="text-base" style={{ color: 'rgb(var(--color-text))' }}>
                     {paso}
                   </span>
                   {i < PASOS.length - 1 && (
                     <ChevronRight
-                      className="w-3 h-3 ml-auto flex-shrink-0 opacity-30"
+                      className="w-4 h-4 ml-auto flex-shrink-0 opacity-25"
                       style={{ color: 'rgb(var(--color-muted))' }}
                       aria-hidden="true"
                     />
@@ -330,16 +299,16 @@ export function HomePage() {
           </div>
         </section>
 
-        {/* ── FUNCIONALIDADES — bento grid con jerarquía visual ── */}
-        <section className="space-y-4">
+        {/* ── FUNCIONALIDADES — bento grid ── */}
+        <section className="space-y-5">
           <h2
-            className="text-2xl font-bold text-balance"
+            className="text-3xl sm:text-4xl font-display font-bold text-balance leading-tight"
             style={{ color: 'rgb(var(--color-text))' }}
           >
             Todo lo que el municipio necesita
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {BENTO.map(cell => (
               <div key={cell.titulo} className={cn('col-span-1', cell.cols)}>
                 <BentoCell {...cell} />
@@ -347,59 +316,57 @@ export function HomePage() {
             ))}
           </div>
 
-          {/* On-premise — franja full-width, no una tarjeta más */}
+          {/* On-premise — franja horizontal, no una tarjeta más */}
           <div
-            className="flex items-center gap-4 px-5 py-4 rounded-xl border"
+            className="flex items-center gap-5 px-6 py-5 rounded-2xl border"
             style={{
-              borderColor: 'rgb(var(--color-border) / 0.4)',
+              borderColor: 'rgb(var(--color-border) / 0.45)',
               background: 'rgb(var(--color-surface) / 0.3)',
             }}
           >
             <div
-              className="p-2 rounded-lg border flex-shrink-0"
+              className="p-3 rounded-xl border flex-shrink-0"
               style={{
                 background: 'rgb(var(--color-primary) / 0.1)',
                 borderColor: 'rgb(var(--color-primary) / 0.2)',
               }}
             >
-              <Lock className="w-3.5 h-3.5" style={{ color: 'rgb(var(--color-primary))' }} aria-hidden="true" />
+              <Lock className="w-5 h-5" style={{ color: 'rgb(var(--color-primary))' }} aria-hidden="true" />
             </div>
-            <div>
-              <span className="text-sm font-semibold" style={{ color: 'rgb(var(--color-text))' }}>
-                100% on-premise{' '}
+            <p className="text-base" style={{ color: 'rgb(var(--color-muted))' }}>
+              <span className="font-bold" style={{ color: 'rgb(var(--color-text))' }}>
+                100% on-premise
               </span>
-              <span className="text-sm" style={{ color: 'rgb(var(--color-muted))' }}>
-                — instalado en servidores del municipio. Los datos nunca salen de la infraestructura local. Sin cargos de nube externa.
-              </span>
-            </div>
+              {' '}— instalado en servidores del municipio. Los datos nunca salen de la infraestructura local. Sin cargos de nube externa.
+            </p>
           </div>
         </section>
 
-        {/* ── PORTAL CTA — horizontal, no una tarjeta adicional ── */}
+        {/* ── PORTAL CTA ── */}
         <section
-          className="flex flex-col sm:flex-row items-start sm:items-center gap-5 p-6 rounded-xl border"
+          className="flex flex-col sm:flex-row items-start sm:items-center gap-6 p-8 rounded-2xl border"
           style={{
             borderColor: 'rgb(var(--color-accent) / 0.25)',
             background: 'rgb(var(--color-accent) / 0.06)',
           }}
         >
           <div
-            className="p-3 rounded-xl border flex-shrink-0"
+            className="p-4 rounded-2xl border flex-shrink-0"
             style={{
               background: 'rgb(var(--color-accent) / 0.15)',
               borderColor: 'rgb(var(--color-accent) / 0.3)',
             }}
           >
-            <Award className="w-5 h-5" style={{ color: 'rgb(var(--color-accent))' }} aria-hidden="true" />
+            <Award className="w-7 h-7" style={{ color: 'rgb(var(--color-accent))' }} aria-hidden="true" />
           </div>
-          <div className="flex-1 space-y-1">
+          <div className="flex-1 space-y-1.5">
             <h3
-              className="text-sm font-bold text-balance"
+              className="text-lg font-bold text-balance font-display"
               style={{ color: 'rgb(var(--color-text))' }}
             >
               Portal de Transparencia Ciudadana
             </h3>
-            <p className="text-[11px] leading-relaxed" style={{ color: 'rgb(var(--color-muted))' }}>
+            <p className="text-sm leading-relaxed" style={{ color: 'rgb(var(--color-muted))' }}>
               Consultá procesos adjudicados, montos pagados y descargá documentos
               oficiales sin necesidad de crear una cuenta.
             </p>
@@ -407,20 +374,18 @@ export function HomePage() {
           <Link
             to="/portal"
             className={cn(
-              'inline-flex items-center gap-1.5 px-4 py-2 rounded-xl',
-              'text-xs font-bold flex-shrink-0 transition-opacity hover:opacity-80',
-              'focus-visible:outline-none focus-visible:ring-2',
+              'inline-flex items-center gap-2 px-6 py-3 rounded-xl',
+              'text-sm font-bold flex-shrink-0 transition-opacity hover:opacity-80',
+              'border focus-visible:outline-none focus-visible:ring-2',
             )}
             style={{
               background: 'rgb(var(--color-accent) / 0.15)',
-              borderWidth: '1px',
-              borderStyle: 'solid',
               borderColor: 'rgb(var(--color-accent) / 0.3)',
               color: 'rgb(var(--color-accent))',
             }}
           >
             Ver procesos
-            <ArrowRight className="w-3 h-3" aria-hidden="true" />
+            <ArrowRight className="w-4 h-4" aria-hidden="true" />
           </Link>
         </section>
 

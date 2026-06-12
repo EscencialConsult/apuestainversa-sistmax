@@ -93,7 +93,7 @@ export function CardProcesoPublico({ proceso }) {
               {FECHA_FORMAT.format(fechaSubasta)}
             </p>
             <p className="text-[10px] text-tenant-muted">
-              a las {HORA_FORMAT.format(fechaSubasta)} · Plataforma SICST MAX
+              a las {HORA_FORMAT.format(fechaSubasta)} · INVERSA.Bid
             </p>
           </div>
         </div>

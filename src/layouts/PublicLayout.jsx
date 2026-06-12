@@ -10,33 +10,22 @@ export function PublicLayout() {
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 border-b border-tenant-border/30 bg-tenant-bg/80 backdrop-blur-glass">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
 
-          {/* Identidad del municipio */}
+          {/* Identidad de la plataforma */}
           <Link to="/" className="flex items-center gap-3 min-w-0 flex-1">
-            {tenant?.logoUrl ? (
-              <img
-                src={tenant.logoUrl}
-                alt={`Logo ${tenant.name}`}
-                className="h-8 w-auto flex-shrink-0"
-              />
-            ) : (
-              <div className={cn(
-                'h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0',
-                'bg-tenant-accent/20 border border-tenant-accent/40',
-              )}>
-                <span className="text-[10px] font-black text-tenant-accent tracking-tighter">
-                  {tenant?.shortName ?? '??'}
-                </span>
-              </div>
-            )}
-
+            <img
+              src="/imgone/favicon-convertido-de-png.webp"
+              alt="INVERSA.Bid"
+              className="h-9 w-auto flex-shrink-0"
+              style={{ filter: 'invert(1) brightness(1.15)' }}
+            />
             <div className="min-w-0">
-              <p className="text-sm font-bold text-tenant-text leading-tight truncate">
-                {tenant?.name ?? 'Municipio'}
+              <p className="font-display text-sm font-bold text-tenant-text leading-tight tracking-tight">
+                INVERSA.Bid
               </p>
-              <p className="text-[10px] text-tenant-muted leading-tight">
-                SICST MAX
+              <p className="text-[10px] text-tenant-muted leading-tight truncate">
+                {tenant?.name ?? 'Municipio'}
               </p>
             </div>
           </Link>
@@ -47,7 +36,7 @@ export function PublicLayout() {
             <img
               src="/imgone/one-iconocolor-convertido-de-png.webp"
               alt="ONE"
-              className="h-6 w-auto opacity-80"
+              className="h-8 w-auto opacity-85"
             />
           </div>
         </div>

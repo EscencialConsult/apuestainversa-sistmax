@@ -21,8 +21,10 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-mono)', 'monospace'],
+        sans:     ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        mono:     ['var(--font-mono)', 'monospace'],
+        display:  ['var(--font-display)', 'var(--font-sans)', 'system-ui', 'sans-serif'],
+        subtitle: ['var(--font-subtitle)', 'var(--font-sans)', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         glass: 'var(--radius-glass)',

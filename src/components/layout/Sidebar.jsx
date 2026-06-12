@@ -122,7 +122,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile }) {
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="text-xs font-bold text-tenant-primary tracking-widest uppercase">SICST MAX</p>
+              <p className="font-display text-xs font-bold text-tenant-primary tracking-tight">INVERSA.Bid</p>
               <p className="text-[10px] text-tenant-muted truncate">{tenant.shortName}</p>
             </div>
           )}

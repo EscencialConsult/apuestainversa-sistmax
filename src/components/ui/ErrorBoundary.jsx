@@ -14,7 +14,7 @@ export class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     // TODO: enviar a servicio de logging on-premise cuando exista la API
-    console.error('[SICST ErrorBoundary]', error, info.componentStack)
+    console.error('[INVERSA.Bid ErrorBoundary]', error, info.componentStack)
   }
 
   handleRetry = () => {

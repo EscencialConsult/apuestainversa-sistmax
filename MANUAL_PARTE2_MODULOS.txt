@@ -1,46 +1,46 @@
 ================================================================
-SICST MAX — SISTEMA INTEGRAL DE COMPRAS Y SUBASTAS TRANSPARENTES
-MANUAL TÉCNICO — PARTE 2: MÓDULOS FUNCIONALES
-Versión: v1.0.0-rc2 | Junio 2026
+INVERSA.Bid â€” SISTEMA INTEGRAL DE COMPRAS Y SUBASTAS TRANSPARENTES
+MANUAL TÃ‰CNICO â€” PARTE 2: MÃ“DULOS FUNCIONALES
+VersiÃ³n: v1.0.0-rc2 | Junio 2026
 ================================================================
 
-ÍNDICE
+ÃNDICE
 ------
-01. Autenticación (Login)
+01. AutenticaciÃ³n (Login)
 02. Dashboard
-03. Gestión de Proveedores
+03. GestiÃ³n de Proveedores
 04. Wizard de Compra (Nueva Compra)
 05. Trading Room (Subasta Inversa en Tiempo Real)
-06. Adjudicación
-07. Módulo de Aprobación (Bandeja de Tareas)
+06. AdjudicaciÃ³n
+07. MÃ³dulo de AprobaciÃ³n (Bandeja de Tareas)
 08. Vista Maestra de Expediente (/compras/:id)
-09. Módulo de Recepción de Bienes
-10. Auditoría
-11. Portal Ciudadano (Público)
+09. MÃ³dulo de RecepciÃ³n de Bienes
+10. AuditorÃ­a
+11. Portal Ciudadano (PÃºblico)
 
 
 ================================================================
-01. AUTENTICACIÓN
+01. AUTENTICACIÃ“N
 Ruta: /login
-Acceso: público
+Acceso: pÃºblico
 ================================================================
 
 FUNCIONALIDAD:
-  Formulario de email + contraseña. Al enviar, llama a loginService
+  Formulario de email + contraseÃ±a. Al enviar, llama a loginService
   que hoy genera un "fakeJwt" local con datos del usuario mock.
 
 USUARIOS MOCK DISPONIBLES (para desarrollo):
   Existen usuarios de prueba para cada rol. El sistema no valida
-  contraseña real en modo mock — cualquier contraseña funciona.
+  contraseÃ±a real en modo mock â€” cualquier contraseÃ±a funciona.
 
-INTEGRACIÓN PENDIENTE CON BACKEND:
+INTEGRACIÃ“N PENDIENTE CON BACKEND:
   Reemplazar loginService por POST /api/auth/login.
   El token JWT real debe guardarse y enviarse en cada request.
-  Los interceptors de apiClient.js ya están preparados para inyectar
-  el Bearer token en los headers automáticamente.
+  Los interceptors de apiClient.js ya estÃ¡n preparados para inyectar
+  el Bearer token en los headers automÃ¡ticamente.
 
 COMPORTAMIENTO POST-LOGIN:
-  Redirige a /dashboard. ProtectedRoute verifica la sesión activa
+  Redirige a /dashboard. ProtectedRoute verifica la sesiÃ³n activa
   antes de renderizar cualquier ruta privada.
 
 
@@ -57,23 +57,23 @@ FUNCIONALIDAD:
 
 
 ================================================================
-03. GESTIÓN DE PROVEEDORES
+03. GESTIÃ“N DE PROVEEDORES
 Rutas: /proveedores, /proveedores/nuevo, /proveedores/arca
 Acceso: admin, comprador
 ================================================================
 
 --- LISTA DE PROVEEDORES (/proveedores) ---
   Tabla con todos los proveedores habilitados del tenant.
-  Columnas: razón social, CUIT, rubro, estado habilitación, fecha alta.
+  Columnas: razÃ³n social, CUIT, rubro, estado habilitaciÃ³n, fecha alta.
   Filtros: por rubro, por estado.
 
 --- WIZARD NUEVO PROVEEDOR (/proveedores/nuevo) ---
   Formulario guiado de 3 pasos para registrar un nuevo proveedor:
 
   PASO 1: Datos del proveedor
-    Razón social, CUIT, domicilio, contacto, rubro principal.
+    RazÃ³n social, CUIT, domicilio, contacto, rubro principal.
 
-  PASO 2: Verificación ARCA (API AFIP)
+  PASO 2: VerificaciÃ³n ARCA (API AFIP)
     Ingresa el CUIT y el sistema consulta ARCA (AFIP) para validar:
       - Estado impositivo
       - Actividades habilitadas
@@ -84,15 +84,15 @@ Acceso: admin, comprador
       un formulario de contingencia para cargar los datos
       manualmente y continuar el registro sin bloquear el proceso.
 
-  PASO 3: Confirmación y alta
+  PASO 3: ConfirmaciÃ³n y alta
     Resumen de datos. El comprador confirma el alta del proveedor.
 
---- VERIFICACIÓN ARCA (/proveedores/arca) ---
-  Placeholder para el módulo detallado de verificación ARCA.
-  Pendiente de implementación en próximo sprint.
+--- VERIFICACIÃ“N ARCA (/proveedores/arca) ---
+  Placeholder para el mÃ³dulo detallado de verificaciÃ³n ARCA.
+  Pendiente de implementaciÃ³n en prÃ³ximo sprint.
 
-PATRÓN DE BLOQUEO:
-  Si el municipio no tiene configurados los rubros (categorías de
+PATRÃ“N DE BLOQUEO:
+  Si el municipio no tiene configurados los rubros (categorÃ­as de
   proveedores), el Paso 1 muestra EmptyState isMandatory bloqueante.
   Demo: ?sinRubros en la URL.
 
@@ -106,26 +106,26 @@ Acceso: comprador, admin
 Proceso guiado de 5 pasos para crear un expediente de compra:
 
   PASO 1: Datos del proceso
-    Título del proceso, área solicitante, número de expediente,
-    descripción técnica, justificación de la compra.
+    TÃ­tulo del proceso, Ã¡rea solicitante, nÃºmero de expediente,
+    descripciÃ³n tÃ©cnica, justificaciÃ³n de la compra.
 
-  PASO 2: Especificaciones técnicas
-    Detalle técnico de los bienes/servicios requeridos.
-    Cantidades, unidades de medida, estándares mínimos.
+  PASO 2: Especificaciones tÃ©cnicas
+    Detalle tÃ©cnico de los bienes/servicios requeridos.
+    Cantidades, unidades de medida, estÃ¡ndares mÃ­nimos.
 
-  PASO 3: Modalidad de contratación
-    Selección del tipo: Licitación Pública, Licitación Privada,
-    Contratación Directa, etc.
+  PASO 3: Modalidad de contrataciÃ³n
+    SelecciÃ³n del tipo: LicitaciÃ³n PÃºblica, LicitaciÃ³n Privada,
+    ContrataciÃ³n Directa, etc.
 
-    PATRÓN DE BLOQUEO: si el municipio no configuró las modalidades
+    PATRÃ“N DE BLOQUEO: si el municipio no configurÃ³ las modalidades
     permitidas, aparece EmptyState isMandatory bloqueante.
     Demo: ?sinModalidades en la URL.
 
-  PASO 4: Invitación de proveedores
-    Selección de proveedores habilitados a invitar al proceso.
-    Mínimo 3 proveedores para Licitación Pública.
+  PASO 4: InvitaciÃ³n de proveedores
+    SelecciÃ³n de proveedores habilitados a invitar al proceso.
+    MÃ­nimo 3 proveedores para LicitaciÃ³n PÃºblica.
 
-  PASO 5: Revisión y publicación
+  PASO 5: RevisiÃ³n y publicaciÃ³n
     Resumen completo del expediente. Al confirmar, el expediente
     pasa a estado PUBLICADO y queda visible para los proveedores
     invitados y en el Portal Ciudadano.
@@ -137,21 +137,21 @@ Ruta: /compras/trading
 Acceso: proveedor, comprador, auditor, admin
 ================================================================
 
-Este es el módulo central de la plataforma. Es la sala de subasta
+Este es el mÃ³dulo central de la plataforma. Es la sala de subasta
 inversa donde los proveedores compiten en tiempo real bajando precios.
 
-MECÁNICA DE LA SUBASTA INVERSA:
+MECÃNICA DE LA SUBASTA INVERSA:
   - Se fija un precio base (presupuesto oficial del municipio)
   - Los proveedores pujan hacia ABAJO (quien ofrezca menos gana)
-  - Cada lance debe ser menor al mínimo actual
+  - Cada lance debe ser menor al mÃ­nimo actual
   - El municipio ahorra dinero en cada ronda
 
-VISTAS SEGÚN ROL:
+VISTAS SEGÃšN ROL:
 
   PROVEEDOR:
-    Ve su posición (Mejor Oferta / Oferta Superada / Descalificado).
+    Ve su posiciÃ³n (Mejor Oferta / Oferta Superada / Descalificado).
     Ve los precios pero NO las identidades de otros proveedores.
-    Puede ingresar su nuevo lance mientras la subasta esté activa.
+    Puede ingresar su nuevo lance mientras la subasta estÃ© activa.
 
   COMPRADOR / AUDITOR / ADMIN:
     Ve el ranking completo con identidades reales de cada proveedor.
@@ -160,64 +160,64 @@ VISTAS SEGÚN ROL:
 
 RELOJ Y ANTI-SNIPER:
   El reloj cuenta regresiva desde el tiempo de cierre configurado.
-  ANTI-SNIPER: Si un proveedor hace una oferta en los últimos 3
-  minutos, el reloj se extiende automáticamente +3 minutos.
-  Esto evita estrategias de "último segundo" y garantiza que todos
-  puedan reaccionar a la última oferta.
+  ANTI-SNIPER: Si un proveedor hace una oferta en los Ãºltimos 3
+  minutos, el reloj se extiende automÃ¡ticamente +3 minutos.
+  Esto evita estrategias de "Ãºltimo segundo" y garantiza que todos
+  puedan reaccionar a la Ãºltima oferta.
 
 WEBSOCKET MOCK:
   Actualmente el Trading Room usa un MockWebSocket que simula
-  lances automáticos cada 5 segundos para demostrar la interfaz.
-  En producción se reemplaza por WebSocket real del backend.
+  lances automÃ¡ticos cada 5 segundos para demostrar la interfaz.
+  En producciÃ³n se reemplaza por WebSocket real del backend.
 
 ESTADOS DE LA SUBASTA:
-  PROGRAMADA    Fecha y hora definidas, aún no comenzó
+  PROGRAMADA    Fecha y hora definidas, aÃºn no comenzÃ³
   ACTIVA        Recibiendo lances en tiempo real
   CERRADA       Tiempo agotado, resultado definido
   ADJUDICADA    Expediente adjudicado al proveedor ganador
 
 
 ================================================================
-06. ADJUDICACIÓN
+06. ADJUDICACIÃ“N
 Ruta: /adjudicacion
 Acceso: comprador, admin
 ================================================================
 
-Módulo para gestionar el proceso post-subasta: firmar la adjudicación
+MÃ³dulo para gestionar el proceso post-subasta: firmar la adjudicaciÃ³n
 y generar los documentos legales oficiales.
 
 SUBCOMPONENTES CLAVE:
 
   TimelineAprobacion:
     Circuito vertical de firmas. Muestra cada etapa del proceso de
-    aprobación con su estado:
+    aprobaciÃ³n con su estado:
       EN_PROGRESO   Etapa activa, esperando firma
       APROBADO      Firmado favorablemente
       RECHAZADO     Rechazado con observaciones obligatorias
-      PENDIENTE     Aún no llegó el turno de esta etapa
+      PENDIENTE     AÃºn no llegÃ³ el turno de esta etapa
 
-    El componente detecta automáticamente si el usuario logueado
+    El componente detecta automÃ¡ticamente si el usuario logueado
     puede firmar la etapa activa (por rol).
     En caso de rechazo, las observaciones son OBLIGATORIAS.
-    Antes de firmar, aparece un panel de confirmación (estilo Neon-Glass)
+    Antes de firmar, aparece un panel de confirmaciÃ³n (estilo Neon-Glass)
     que muestra resumen + campo de observaciones.
     Prop readOnly={true} para uso en la Vista Maestra (solo lectura).
 
   VisorPlantillas:
-    Visor de documentos con dos tabs: Resolución de Adjudicación y
+    Visor de documentos con dos tabs: ResoluciÃ³n de AdjudicaciÃ³n y
     Orden de Compra.
     Muestra la plantilla con las variables del expediente ya resaltadas
     (nombre del ganador, monto, fechas, autoridad, etc.).
-    Botón para descargar el documento como .txt con BOM UTF-8
+    BotÃ³n para descargar el documento como .txt con BOM UTF-8
     (compatible con Word y Excel).
 
-    PATRÓN DE BLOQUEO: si el municipio no cargó la plantilla oficial,
+    PATRÃ“N DE BLOQUEO: si el municipio no cargÃ³ la plantilla oficial,
     EmptyState isMandatory bloquea el visor.
     Demo: ?sinPlantillaContrato  y  ?sinPlantillaOrden
 
 
 ================================================================
-07. MÓDULO DE APROBACIÓN (BANDEJA DE TAREAS)
+07. MÃ“DULO DE APROBACIÃ“N (BANDEJA DE TAREAS)
 Ruta: /aprobacion
 Acceso: autoridad_aprobadora, admin
 ================================================================
@@ -227,25 +227,25 @@ trabajo del rol autoridad_aprobadora.
 
 ESTRUCTURA DE LA PANTALLA:
 
-  Panel izquierdo — BandejaAprobaciones:
-    Lista de expedientes pendientes de acción.
+  Panel izquierdo â€” BandejaAprobaciones:
+    Lista de expedientes pendientes de acciÃ³n.
     Cada tarjeta muestra:
-      - Barra lateral de color según prioridad (alta/media/baja)
-      - Número de expediente, título, área
-      - Tiempo transcurrido desde que llegó a esta etapa
+      - Barra lateral de color segÃºn prioridad (alta/media/baja)
+      - NÃºmero de expediente, tÃ­tulo, Ã¡rea
+      - Tiempo transcurrido desde que llegÃ³ a esta etapa
       - Porcentaje de ahorro logrado en la subasta
     Al hacer clic en una tarjeta se carga el detalle.
 
-  Panel derecho — DetalleAprobacion:
+  Panel derecho â€” DetalleAprobacion:
     Una vez seleccionado un expediente:
-      - 4 estadísticas: monto base, monto adjudicado, ahorro, adjudicatario
+      - 4 estadÃ­sticas: monto base, monto adjudicado, ahorro, adjudicatario
       - Cuadro comparativo de todas las ofertas recibidas (ranking)
       - TimelineAprobacion reutilizado para firmar/rechazar
-      - El usuario firma la etapa que le corresponde según su rol
+      - El usuario firma la etapa que le corresponde segÃºn su rol
 
-PATRÓN DE BLOQUEO:
-  Si el municipio no configuró la jerarquía de aprobaciones (quién firma,
-  en qué orden, cuántas etapas), EmptyState isMandatory bloquea toda la
+PATRÃ“N DE BLOQUEO:
+  Si el municipio no configurÃ³ la jerarquÃ­a de aprobaciones (quiÃ©n firma,
+  en quÃ© orden, cuÃ¡ntas etapas), EmptyState isMandatory bloquea toda la
   bandeja y muestra instrucciones para configurarla.
   Demo: ?sinJerarquias en la URL.
 
@@ -253,122 +253,122 @@ PATRÓN DE BLOQUEO:
 ================================================================
 08. VISTA MAESTRA DE EXPEDIENTE
 Ruta: /compras/:id
-Acceso: todos los roles autenticados (lectura según rol)
+Acceso: todos los roles autenticados (lectura segÃºn rol)
 ================================================================
 
 Dashboard completo del ciclo de vida de un expediente. Organizado en
-5 tabs. Es solo lectura para todos los roles (el comprador actúa desde
-los módulos específicos, no desde aquí).
+5 tabs. Es solo lectura para todos los roles (el comprador actÃºa desde
+los mÃ³dulos especÃ­ficos, no desde aquÃ­).
 
-  TAB 1 — GENERAL:
+  TAB 1 â€” GENERAL:
     Estado actual del expediente (badge de color).
-    Descripción del proceso, área solicitante, modalidad, presupuesto.
-    Especificaciones técnicas en formato preformateado.
-    Fechas clave (creación, publicación, cierre de subasta).
+    DescripciÃ³n del proceso, Ã¡rea solicitante, modalidad, presupuesto.
+    Especificaciones tÃ©cnicas en formato preformateado.
+    Fechas clave (creaciÃ³n, publicaciÃ³n, cierre de subasta).
 
-  TAB 2 — PROVEEDORES:
+  TAB 2 â€” PROVEEDORES:
     Tabla con todos los proveedores invitados al proceso.
-    Estado por proveedor: Invitado → Doc.Aprobada → Técnica Aprobada
-                          → Adjudicado / Descalificado
-    El adjudicado aparece con ícono de trofeo. El descalificado en rojo.
-    Observaciones de la evaluación si las hay.
+    Estado por proveedor: Invitado â†’ Doc.Aprobada â†’ TÃ©cnica Aprobada
+                          â†’ Adjudicado / Descalificado
+    El adjudicado aparece con Ã­cono de trofeo. El descalificado en rojo.
+    Observaciones de la evaluaciÃ³n si las hay.
 
-  TAB 3 — SUBASTA:
-    4 métricas: monto base, monto adjudicado, ahorro ($), ahorro (%).
-    Historial completo de lances en tabla cronológica.
-    Por cada lance: hora, proveedor, monto ofertado, reducción respecto
+  TAB 3 â€” SUBASTA:
+    4 mÃ©tricas: monto base, monto adjudicado, ahorro ($), ahorro (%).
+    Historial completo de lances en tabla cronolÃ³gica.
+    Por cada lance: hora, proveedor, monto ofertado, reducciÃ³n respecto
     al lance anterior (en $ y en %).
-    Duración total de la sesión de subasta.
+    DuraciÃ³n total de la sesiÃ³n de subasta.
 
-  TAB 4 — APROBACIÓN:
+  TAB 4 â€” APROBACIÃ“N:
     TimelineAprobacion en modo readOnly={true}.
     Muestra el circuito completo con fechas, firmantes y observaciones.
-    VisorPlantillas con los documentos generados (Resolución + Orden).
+    VisorPlantillas con los documentos generados (ResoluciÃ³n + Orden).
 
-  TAB 5 — RECEPCIÓN:
-    (Ver módulo completo en sección 09)
-    Indicador pulsante en el tab cuando la recepción está pendiente.
+  TAB 5 â€” RECEPCIÃ“N:
+    (Ver mÃ³dulo completo en secciÃ³n 09)
+    Indicador pulsante en el tab cuando la recepciÃ³n estÃ¡ pendiente.
 
 
 ================================================================
-09. MÓDULO DE RECEPCIÓN DE BIENES
-Ubicación: Tab 5 del /compras/:id
+09. MÃ“DULO DE RECEPCIÃ“N DE BIENES
+UbicaciÃ³n: Tab 5 del /compras/:id
 Acceso: comprador, admin
 ================================================================
 
-Registra la entrega física de los bienes o servicios contratados y
-genera el Acta de Recepción Conforme con valor legal.
+Registra la entrega fÃ­sica de los bienes o servicios contratados y
+genera el Acta de RecepciÃ³n Conforme con valor legal.
 
-PATRÓN DE BLOQUEO (DIRECTIVA INNEGOCIABLE):
+PATRÃ“N DE BLOQUEO (DIRECTIVA INNEGOCIABLE):
   Si el municipio no tiene configurada la plantilla oficial del Acta de
-  Recepción Conforme, el módulo muestra EmptyState isMandatory y no
+  RecepciÃ³n Conforme, el mÃ³dulo muestra EmptyState isMandatory y no
   permite registrar ni cerrar el expediente.
   Demo: ?sinDocConformidad en la URL.
 
-FLUJO NORMAL (cuando la plantilla está configurada):
+FLUJO NORMAL (cuando la plantilla estÃ¡ configurada):
 
-  Si ya hay recepción registrada:
-    Muestra un banner verde de confirmación con número de acta y fecha.
-    VisorActa con el documento generado y botón de descarga (.txt BOM).
+  Si ya hay recepciÃ³n registrada:
+    Muestra un banner verde de confirmaciÃ³n con nÃºmero de acta y fecha.
+    VisorActa con el documento generado y botÃ³n de descarga (.txt BOM).
 
-  Si no hay recepción aún:
+  Si no hay recepciÃ³n aÃºn:
     Formulario con 3 campos obligatorios:
-      - Fecha de recepción (date picker)
-      - Lugar de recepción (texto libre)
+      - Fecha de recepciÃ³n (date picker)
+      - Lugar de recepciÃ³n (texto libre)
       - Funcionario receptor (nombre y cargo)
     Campo opcional:
-      - Observaciones (condición de los bienes, faltantes, etc.)
+      - Observaciones (condiciÃ³n de los bienes, faltantes, etc.)
 
   Al registrar:
-    El sistema genera el Acta con número correlativo.
-    Llama a logEventoExterno() para escribir en la bitácora de auditoría.
+    El sistema genera el Acta con nÃºmero correlativo.
+    Llama a logEventoExterno() para escribir en la bitÃ¡cora de auditorÃ­a.
     El expediente pasa a estado CERRADO.
-    El Tab 5 muestra el acta generada con opción de descarga.
+    El Tab 5 muestra el acta generada con opciÃ³n de descarga.
 
 
 ================================================================
-10. AUDITORÍA
+10. AUDITORÃA
 Ruta: /auditoria
 Acceso: auditor, admin (solo lectura para todos)
 ================================================================
 
-Bitácora inmutable de TODOS los eventos del sistema. Un registro
-en la auditoría nunca se modifica ni elimina — solo se agrega.
+BitÃ¡cora inmutable de TODOS los eventos del sistema. Un registro
+en la auditorÃ­a nunca se modifica ni elimina â€” solo se agrega.
 
 FUNCIONALIDADES:
 
   TablaAuditoria:
-    Tabla paginada con columnas: fecha/hora, módulo, tipo de evento,
-    usuario, descripción, tenantId.
+    Tabla paginada con columnas: fecha/hora, mÃ³dulo, tipo de evento,
+    usuario, descripciÃ³n, tenantId.
     Permite ordenar por fecha (ascendente/descendente).
-    Paginación interna configurable.
+    PaginaciÃ³n interna configurable.
 
   Filtros disponibles:
     - Fecha desde / Fecha hasta
-    - Módulo (compras, adjudicacion, aprobacion, recepcion, etc.)
+    - MÃ³dulo (compras, adjudicacion, aprobacion, recepcion, etc.)
     - Tipo de evento (creacion, modificacion, firma, rechazo, etc.)
-    - Búsqueda libre (descripción del evento)
+    - BÃºsqueda libre (descripciÃ³n del evento)
 
   Debounce:
-    La búsqueda libre usa debounce de 300ms para no saturar la API
+    La bÃºsqueda libre usa debounce de 300ms para no saturar la API
     en cada keystroke.
 
-  Exportación CSV:
-    Botón para exportar la tabla filtrada como .csv con BOM UTF-8.
+  ExportaciÃ³n CSV:
+    BotÃ³n para exportar la tabla filtrada como .csv con BOM UTF-8.
     El CSV respeta los mismos filtros aplicados en la vista.
 
-ESCRITURA SILENCIOSA DESDE OTROS MÓDULOS:
-  Cualquier módulo puede escribir en la auditoría sin interrumpir el
+ESCRITURA SILENCIOSA DESDE OTROS MÃ“DULOS:
+  Cualquier mÃ³dulo puede escribir en la auditorÃ­a sin interrumpir el
   flujo del usuario llamando a logEventoExterno(tenantId, evento).
   Actualmente es un stub (delay 50ms, retorna ok).
-  Se usa en: registrarRecepcion() después de registrar el acta.
+  Se usa en: registrarRecepcion() despuÃ©s de registrar el acta.
 
 
 ================================================================
 11. PORTAL CIUDADANO
 Ruta: /portal
-Acceso: PÚBLICO — sin autenticación, sin sesión
-Layout: PublicLayout (header con logo/nombre del tenant, sin sidebar)
+Acceso: PÃšBLICO â€” sin autenticaciÃ³n, sin sesiÃ³n
+Layout: PublicLayout (header con isotipo INVERSA.Bid + nombre del tenant, sin sidebar)
 ================================================================
 
 Portal de transparencia para que cualquier ciudadano consulte las
@@ -381,37 +381,37 @@ SEGURIDAD:
   - No hay forma de acceder a datos internos desde esta ruta
 
 BUSCADOR CIUDADANO:
-  Input de búsqueda con debounce de 300ms.
+  Input de bÃºsqueda con debounce de 300ms.
   Filtra en tiempo real por:
-    - Número de expediente (ej: EXP-2025-0142)
-    - Objeto de la contratación (palabra clave en el título)
-    - Razón social del adjudicatario
-  El input es no controlado (uncontrolled) para máximo rendimiento.
-  El filtro se calcula derivado en render — sin estado adicional.
+    - NÃºmero de expediente (ej: EXP-2025-0142)
+    - Objeto de la contrataciÃ³n (palabra clave en el tÃ­tulo)
+    - RazÃ³n social del adjudicatario
+  El input es no controlado (uncontrolled) para mÃ¡ximo rendimiento.
+  El filtro se calcula derivado en render â€” sin estado adicional.
 
 GRILLA DE PROCESOS (CardProcesoPublico):
   Cada proceso se muestra como una tarjeta con dos variantes:
 
-  Variante PUBLICADO (subasta próxima):
-    Badge cyan "Subasta Próxima"
+  Variante PUBLICADO (subasta prÃ³xima):
+    Badge cyan "Subasta PrÃ³xima"
     Monto base estimado
     Fecha y hora de la subasta
-    Área y modalidad
+    Ãrea y modalidad
 
   Variante ADJUDICADO (proceso cerrado):
     Badge verde "Adjudicado"
     Monto final adjudicado
-    Razón social y CUIT del ganador
-    Porcentaje de ahorro obtenido (↓ X%)
+    RazÃ³n social y CUIT del ganador
+    Porcentaje de ahorro obtenido (â†“ X%)
     Monto base original para comparar
 
-SECCIÓN DE DOCUMENTOS PÚBLICOS:
+SECCIÃ“N DE DOCUMENTOS PÃšBLICOS:
   Lista de documentos descargables:
-    - Resoluciones de Adjudicación
-    - Órdenes de Compra
-    - Actas de Recepción Conforme
-  Cada fila muestra: tipo, número de expediente, fecha de emisión.
-  Botón "Descargar .txt" por documento.
+    - Resoluciones de AdjudicaciÃ³n
+    - Ã“rdenes de Compra
+    - Actas de RecepciÃ³n Conforme
+  Cada fila muestra: tipo, nÃºmero de expediente, fecha de emisiÃ³n.
+  BotÃ³n "Descargar .txt" por documento.
   Los archivos se descargan con BOM UTF-8 para compatibilidad con Word.
 
 SERVICIO portalService.js:
@@ -422,32 +422,33 @@ SERVICIO portalService.js:
 
 
 ================================================================
-RESUMEN: FLUJO COMPLETO DE UNA COMPRA PÚBLICA
+RESUMEN: FLUJO COMPLETO DE UNA COMPRA PÃšBLICA
 ================================================================
 
   1. COMPRADOR crea expediente          /compras/nueva (5 pasos)
-       ↓
+       â†“
   2. Sistema PUBLICA proceso            visible en /portal
-       ↓
-  3. EVALUADOR verifica proveedores     documentos + técnica
-       ↓
-  4. TRADING ROOM — subasta activa      /compras/trading (tiempo real)
-       ↓
-  5. Subasta CIERRA — hay ganador       precio final determinado
-       ↓
-  6. AUTORIDAD firma adjudicación       /aprobacion (circuito de firmas)
-       ↓
-  7. Documentos generados               Resolución + Orden de Compra
-       ↓
-  8. COMPRADOR registra recepción       /compras/:id → Tab Recepción
-       ↓
+       â†“
+  3. EVALUADOR verifica proveedores     documentos + tÃ©cnica
+       â†“
+  4. TRADING ROOM â€” subasta activa      /compras/trading (tiempo real)
+       â†“
+  5. Subasta CIERRA â€” hay ganador       precio final determinado
+       â†“
+  6. AUTORIDAD firma adjudicaciÃ³n       /aprobacion (circuito de firmas)
+       â†“
+  7. Documentos generados               ResoluciÃ³n + Orden de Compra
+       â†“
+  8. COMPRADOR registra recepciÃ³n       /compras/:id â†’ Tab RecepciÃ³n
+       â†“
   9. Acta de conformidad generada       expediente CERRADO
-       ↓
-  10. TODO queda en auditoría           /auditoria (inmutable)
-       ↓
-  11. CIUDADANO puede consultar         /portal (documentos públicos)
+       â†“
+  10. TODO queda en auditorÃ­a           /auditoria (inmutable)
+       â†“
+  11. CIUDADANO puede consultar         /portal (documentos pÃºblicos)
 
 
 ================================================================
-FIN PARTE 2 — Ver PARTE 3 para deploy, API y configuración técnica
+FIN PARTE 2 â€” Ver PARTE 3 para deploy, API y configuraciÃ³n tÃ©cnica
 ================================================================
+

@@ -26,7 +26,7 @@ function applyTheme(theme) {
 
 function applyMeta(data) {
   document.documentElement.classList.add('dark')
-  document.title = `SICST MAX — ${data.shortName}`
+  document.title = `INVERSA.Bid — ${data.shortName}`
   if (data.faviconUrl) {
     const link = document.querySelector("link[rel~='icon']")
     if (link) link.href = data.faviconUrl
@@ -64,7 +64,7 @@ function TenantNotFound({ tenantId }) {
       <h1 className="text-xl font-bold">404 — Tenant No Encontrado</h1>
       <p className="text-sm text-slate-400 max-w-md">
         El municipio <span className="font-mono text-red-400">"{tenantId}"</span> no está
-        registrado en esta instancia de SICST MAX. Verificá la URL o contactá al administrador del sistema.
+        registrado en esta instancia de INVERSA.Bid. Verificá la URL o contactá al administrador del sistema.
       </p>
     </div>
   )

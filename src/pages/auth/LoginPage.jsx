@@ -61,7 +61,7 @@ export function LoginPage() {
             className="h-10 w-auto"
           />
           <div>
-            <p className="text-base font-bold text-tenant-text tracking-wide">SICST MAX</p>
+            <p className="font-display text-base font-bold text-tenant-text tracking-tight">INVERSA.Bid</p>
             <p className="text-xs text-tenant-muted mt-0.5">{tenant?.name ?? 'Sistema de Subastas'}</p>
           </div>
         </div>
