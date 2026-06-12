@@ -82,15 +82,27 @@ export function TenantProvider({ children }) {
     cargarBranding(id)
       .then(result => {
         if (cancelado) return
-        if (!result.ok) { dispatch({ type: 'NO_ENCONTRADO', tenantId: id }); return }
+        if (!result.ok) {
+          // API no tiene el tenant → fallback a config local (dev + previews sin backend)
+          if (TENANTS[id]) {
+            const local = TENANTS[id]
+            applyTheme(local.theme)
+            applyMeta(local)
+            dispatch({ type: 'CARGADO', tenant: local, tenantId: id })
+          } else {
+            dispatch({ type: 'NO_ENCONTRADO', tenantId: id })
+          }
+          return
+        }
         applyTheme(result.data.theme)
         applyMeta(result.data)
         dispatch({ type: 'CARGADO', tenant: result.data, tenantId: id })
       })
       .catch(() => {
         if (cancelado) return
-        // Fallback a config local — exclusivo para entorno de desarrollo
-        if (import.meta.env.DEV && TENANTS[id]) {
+        // Red caída o respuesta no-JSON (ej: Netlify redirige /api/* al index.html)
+        // → fallback a config local si el tenant existe
+        if (TENANTS[id]) {
           const local = TENANTS[id]
           applyTheme(local.theme)
           applyMeta(local)
