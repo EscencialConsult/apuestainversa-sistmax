@@ -1,0 +1,387 @@
+================================================================
+SICST MAX — SISTEMA INTEGRAL DE COMPRAS Y SUBASTAS TRANSPARENTES
+MANUAL TÉCNICO — PARTE 1: VISIÓN, ARQUITECTURA Y ROLES
+Versión: v1.0.0-rc2 | Junio 2026
+================================================================
+
+ÍNDICE
+------
+1.  Qué es SICST MAX
+2.  Modelo de negocio (ONE como operador SaaS)
+3.  Stack tecnológico
+4.  Arquitectura del frontend
+5.  Sistema multi-tenant
+6.  Autenticación y roles de usuario
+7.  Routing y acceso por rol
+8.  Patrones de ingeniería obligatorios
+9.  Estructura de archivos clave
+
+
+================================================================
+1. QUÉ ES SICST MAX
+================================================================
+
+SICST MAX es una plataforma SaaS de compras públicas digitales para
+municipios. Digitaliza el proceso completo de adquisición:
+
+  Registro de proveedores
+    → Creación del expediente de compra
+      → Subasta inversa en tiempo real
+        → Adjudicación con circuito de firmas
+          → Recepción de bienes con acta oficial
+            → Auditoría inmutable
+
+Además expone un Portal Ciudadano público para que cualquier
+ciudadano consulte procesos adjudicados y descargue documentos
+oficiales sin necesidad de iniciar sesión.
+
+Operado por ONE, quien lo habilita por municipio (tenant).
+Cada municipio opera en su propio entorno aislado, con su identidad
+visual y sus datos, sobre el mismo core de código.
+
+
+================================================================
+2. MODELO DE NEGOCIO — ONE COMO OPERADOR SAAS
+================================================================
+
+ONE es la empresa propietaria y operadora de SICST MAX.
+
+Los clientes de ONE son municipios o empresas públicas. Cada cliente
+es un "tenant" con:
+  - Subdominio propio:  sanmiguel.sicst.app
+  - Branding propio:    colores, logo, nombre
+  - Base de datos propia: datos completamente aislados de otros tenants
+
+Para activar un nuevo cliente:
+  1. Configurar DNS: agregar subdominio wildcard (*.sicst.app → servidor)
+  2. Insertar registro en la tabla TenantProfile de la DB de ONE
+  3. Subir logo al servidor de assets
+  4. Verificar con ?tenant=<id> en localhost
+  5. Confirmar acceso desde el subdominio real
+
+NO se requiere tocar código fuente ni redesplegar el frontend.
+Esto es posible porque el TenantContext del frontend carga el
+branding dinámicamente desde la API en cada arranque.
+
+
+================================================================
+3. STACK TECNOLÓGICO
+================================================================
+
+FRONTEND (este repositorio):
+  - Vite 8            Bundler (usa rolldown internamente)
+  - React 19          UI library (hooks, Suspense, lazy)
+  - React Router v7   Routing (BrowserRouter, lazy pages, Outlet)
+  - Tailwind CSS v3   Estilos (variables CSS custom para theming)
+  - Lucide React      Iconografía (tree-shaken automáticamente)
+  - Axios             HTTP client
+  - clsx + tailwind-merge  Utilitarios de clases CSS
+
+HERRAMIENTAS DE CALIDAD:
+  - react-doctor      Auditoría automática (mantenida en 100/100)
+  - ESLint            Linting
+  - Vite preview      Preview del build de producción
+
+BUILD DE PRODUCCIÓN:
+  - npm run build     Genera dist/ con chunks separados por página
+  - Vendor chunks:    vendor-react (189 kB), vendor-ui (18 kB), vendor-util (27 kB)
+  - Page chunks:      cada página es un chunk lazy de 1-33 kB
+  - CSS:              index.css (73 kB) — Tailwind completo
+
+BACKEND (equipo separado):
+  - Los servicios en src/services/api/ son mocks actualmente
+  - Ver PARTE 3 para los contratos de API requeridos
+
+
+================================================================
+4. ARQUITECTURA DEL FRONTEND
+================================================================
+
+LAYOUT DEL ÁRBOL DE COMPONENTES:
+
+  App.jsx
+  └── TenantProvider (inyecta branding dinámico)
+      ├── ErrorBoundary
+      └── AuthProvider (inyecta usuario autenticado)
+          └── BrowserRouter
+              ├── /login           → LoginPage (pública)
+              ├── /portal          → PublicLayout → PortalPage (pública)
+              └── ProtectedRoute
+                  └── DashboardLayout (sidebar + navbar)
+                      ├── /dashboard
+                      ├── /usuarios
+                      ├── /proveedores
+                      ├── /proveedores/nuevo
+                      ├── /compras
+                      ├── /compras/nueva
+                      ├── /compras/trading
+                      ├── /compras/:id
+                      ├── /adjudicacion
+                      ├── /aprobacion
+                      └── /auditoria
+
+CODE SPLITTING:
+  Cada página se carga con React.lazy() + Suspense. El chunk de la
+  página se descarga solo cuando el usuario navega a esa ruta. El
+  loader (spinner giratorio con color del tenant) aparece durante
+  la carga. Esto garantiza que el Trading Room no compita por memoria
+  con otros módulos.
+
+FUNCIÓN lazyPage() en App.jsx:
+  Las páginas usan named exports ("export function MiPágina").
+  Como lazy() requiere default export, lazyPage() hace el mapeo:
+    const MiPágina = lazyPage(() => import('./pages/MiPagina'), 'MiPagina')
+
+
+================================================================
+5. SISTEMA MULTI-TENANT
+================================================================
+
+RESOLUCIÓN DEL TENANT (resolveTenantId en config/tenants.js):
+
+  En producción:
+    - URL: sanmiguel.sicst.app → subdominio = "sanmiguel" → tenantId
+    - El subdominio es la fuente de verdad absoluta
+
+  En desarrollo local:
+    - ?tenant=sanmiguel en la URL   (primera prioridad en dev)
+    - localStorage 'sicst_tenant_dev'  (segunda prioridad)
+    - DEFAULT_TENANT_ID = 'sanmiguel'  (fallback final)
+
+CICLO DE VIDA DEL TENANTCONTEXT:
+
+  1. App monta → TenantProvider ejecuta su useEffect
+  2. resolveTenantId() lee el subdominio
+  3. cargarBranding(id) hace GET /api/tenants/:tenantId/branding
+  4. Mientras espera → renderiza TenantLoader (spinner #030712)
+  5a. Si 404 → renderiza TenantNotFound (pantalla fatal, ninguna página carga)
+  5b. Si ok → inyecta variables CSS en document.documentElement
+  6. Renderiza el árbol de la aplicación con el branding activo
+
+INYECCIÓN DE VARIABLES CSS (applyTheme):
+  Se escribe en document.documentElement.style cada variable del tema:
+    --color-primary, --color-secondary, --color-accent,
+    --color-success, --color-warning, --color-danger,
+    --color-bg, --color-surface, --color-border,
+    --color-text, --color-muted
+
+  Tailwind los consume así en tailwind.config.js:
+    'tenant-primary': 'rgb(var(--color-primary) / <alpha-value>)'
+  Esto permite clases como bg-tenant-primary/50 con opacidad dinámica.
+
+AISLAMIENTO DE DATOS:
+  En TODOS los servicios, tenantId es el PRIMER filtro aplicado.
+  Ninguna consulta devuelve datos de otro tenant, aunque el endpoint
+  reciba un tenantId incorrecto. Esto aplica tanto a mock services
+  como (obligatoriamente) al backend real.
+
+FALLBACK DE DESARROLLO:
+  Si la API no responde (sin backend levantado), TenantContext detecta
+  import.meta.env.DEV y carga el config local de tenants.js.
+  En producción no hay fallback — si la API falla, pantalla fatal.
+
+
+================================================================
+6. AUTENTICACIÓN Y ROLES DE USUARIO
+================================================================
+
+AUTENTICACIÓN ACTUAL (mock):
+  LoginPage genera un "fakeJwt" local. Cuando el backend esté listo,
+  LoginPage debe cambiar a POST /api/auth/login y guardar el token JWT
+  real. El resto del sistema no cambia.
+
+AUTHCONTEXT:
+  Expone { user, login, logout }
+  user tiene: { id, name, email, role, tenantId }
+
+LOS 8 ROLES DEL SISTEMA:
+
+  admin
+    Acceso total. Configura usuarios, módulos y parámetros del tenant.
+    Única cuenta que puede modificar la jerarquía de aprobación.
+
+  comprador
+    Crea expedientes de compra, configura proveedores invitados, inicia
+    y monitorea subastas. Registra la recepción de bienes.
+
+  proveedor
+    Ve la sala de subasta de procesos en los que fue invitado.
+    Solo ve precios anonimizados (no sabe quién es quién).
+    Presenta sus lances durante la subasta activa.
+
+  evaluador_documental
+    Revisa y aprueba/rechaza la documentación legal de los proveedores
+    durante la evaluación previa a la subasta.
+
+  evaluador_tecnico
+    Evalúa las especificaciones técnicas de las ofertas.
+    Puede emitir dictámenes técnicos vinculantes.
+
+  auditor
+    Acceso de solo lectura a toda la bitácora de auditoría.
+    Ve identidades completas (a diferencia del proveedor).
+    No puede modificar ningún dato.
+
+  autoridad_aprobadora
+    Firma o rechaza etapas del circuito de aprobación pre-adjudicación.
+    Recibe notificaciones cuando hay expedientes pendientes de firma.
+    Las observaciones son obligatorias en caso de rechazo.
+
+  usuario_consulta
+    Solo lectura. Puede ver expedientes y sus estados pero no actúa.
+
+
+================================================================
+7. ROUTING Y ACCESO POR ROL
+================================================================
+
+La fuente única de verdad para los roles permitidos por ruta es:
+  src/config/navigation.js  →  función getAllowedRoles(path)
+
+Cada <Route> privado en App.jsx usa el componente <Guarded>:
+  <Guarded path="/aprobacion"><AprobacionPage /></Guarded>
+  → Internamente llama ProtectedRoute con allowedRoles=getAllowedRoles("/aprobacion")
+
+Si el usuario no tiene el rol requerido → redirige a /unauthorized.
+Si no tiene sesión → redirige a /login.
+
+RUTAS PÚBLICAS (sin auth, sin roles):
+  /login    Página de inicio de sesión
+  /portal   Portal Ciudadano (PublicLayout, accesible a cualquier ciudadano)
+
+
+================================================================
+8. PATRONES DE INGENIERÍA OBLIGATORIOS
+================================================================
+
+Estos patrones se aplican en TODOS los módulos del sistema.
+Un nuevo ingenieros DEBE seguirlos o react-doctor bajará el score.
+
+1. useReducer PARA ESTADO MÚLTIPLE
+   Cuando hay más de un setState relacionado (cargando + datos + error),
+   siempre se usa useReducer con una acción que los actualiza juntos.
+   Evita renders intermedios inconsistentes.
+
+   Ejemplo:
+     const initial = { datos: [], cargando: true, error: null }
+     function reducer(state, action) {
+       if (action.type === 'CARGADO') return { datos: action.datos, cargando: false, error: null }
+       if (action.type === 'ERROR')   return { ...state, cargando: false, error: action.msg }
+       return state
+     }
+     const [state, dispatch] = useReducer(reducer, initial)
+
+2. BANDERA "cancelado" EN useEffect ASYNC
+   Todo useEffect que haga operaciones async DEBE tener esta bandera
+   para evitar actualizar estado en un componente ya desmontado.
+
+   Ejemplo:
+     useEffect(() => {
+       let cancelado = false
+       fetchDatos(tenantId).then(datos => {
+         if (!cancelado) dispatch({ type: 'CARGADO', datos })
+       })
+       return () => { cancelado = true }
+     }, [tenantId])
+
+3. Promise.all PARA CARGAS PARALELAS
+   Si hay dos o más datos independientes que cargar al montar, siempre
+   usar Promise.all en vez de await secuenciales:
+     Promise.all([servicio1(id), servicio2(id)]).then(([a, b]) => ...)
+
+4. MODULE-SCOPE STATICS
+   Formatters, funciones puras, arrays y objetos que no dependen de
+   props/state se declaran FUERA del componente (a nivel módulo).
+   Nunca dentro del render.
+     const CURRENCY_FORMAT = new Intl.NumberFormat('es-AR', {...})  ← CORRECTO
+     function pctAhorro(base, adj) { return ... }                   ← CORRECTO
+
+5. EmptyState isMandatory PARA PARÁMETROS NO CONFIGURADOS
+   Si un módulo requiere que el municipio haya configurado un recurso
+   (plantilla de contrato, jerarquía de aprobaciones, etc.) y ese
+   recurso no existe, el módulo NO puede mostrarse.
+   Se usa <EmptyState isMandatory={true} /> que bloquea la pantalla
+   y muestra un mensaje claro al administrador.
+
+   Parámetros actuales que bloquean si no están configurados:
+     - Jerarquía de aprobación    → ?sinJerarquias en URL (demo)
+     - Plantilla de contrato      → ?sinPlantillaContrato (demo)
+     - Plantilla de orden         → ?sinPlantillaOrden (demo)
+     - Documento de conformidad   → ?sinDocConformidad (demo)
+     - Modalidades de compra      → ?sinModalidades (demo)
+
+6. useCallback PARA HANDLERS PASADOS COMO PROPS
+   Todo handler que se pasa como prop a un hijo debe estar envuelto
+   en useCallback para evitar re-renders innecesarios del hijo.
+
+7. BOTONES CON type EXPLÍCITO
+   Todo <button> tiene type="button" o type="submit". Sin excepciones.
+   Un <button> sin type dentro de un <form> dispara el submit.
+
+8. ACCESIBILIDAD BÁSICA
+   - aria-label en controles sin texto visible (íconos solos)
+   - scope="col" en <th> de tablas
+   - Inputs con id + label htmlFor asociado
+
+
+================================================================
+9. ESTRUCTURA DE ARCHIVOS CLAVE
+================================================================
+
+src/
+├── config/
+│   ├── tenants.js          Config local de tenants (dev-only fallback)
+│   └── navigation.js       Árbol de nav + getAllowedRoles(path)
+│
+├── contexts/
+│   ├── TenantContext.jsx   Branding dinámico, App Shell, multi-tenant
+│   └── AuthContext.jsx     Usuario, login, logout, roles
+│
+├── layouts/
+│   ├── DashboardLayout.jsx Sidebar colapsable + Navbar (rutas privadas)
+│   └── PublicLayout.jsx    Header mínimo con logo del tenant (portal)
+│
+├── components/
+│   ├── auth/
+│   │   └── ProtectedRoute.jsx   Guard de autenticación y roles
+│   └── ui/
+│       ├── EmptyState.jsx       Pantalla bloqueante de parámetros faltantes
+│       ├── ErrorBoundary.jsx    Captura errores React en producción
+│       └── BadgeEstado.jsx      Badge visual de estado de expediente
+│
+├── services/api/
+│   ├── apiClient.js         Instancia de axios con interceptors
+│   ├── adjudicacionService.js
+│   ├── aprobacionService.js
+│   ├── arcaService.js       Verificación ARCA (mock + contingencia)
+│   ├── auditoriaService.js  Bitácora + logEventoExterno()
+│   ├── catalogosService.js  Rubros, modalidades, etc.
+│   ├── expedienteService.js Vista maestra + recepción
+│   └── portalService.js     Procesos y documentos públicos
+│
+├── pages/
+│   ├── auth/               Login, Unauthorized
+│   ├── dashboard/          Dashboard principal
+│   ├── usuarios/           Gestión de usuarios
+│   ├── proveedores/        Lista, wizard nuevo proveedor, ARCA
+│   ├── compras/
+│   │   ├── expediente/     5 tabs de la vista maestra
+│   │   ├── ComprasPage
+│   │   ├── NuevaCompraPage (wizard 5 pasos)
+│   │   ├── TradingRoomPage
+│   │   └── DetalleCompraPage
+│   ├── adjudicacion/       AdjudicacionPage, TimelineAprobacion, VisorPlantillas
+│   ├── aprobacion/         BandejaAprobaciones, DetalleAprobacion, AprobacionPage
+│   ├── auditoria/          AuditoriaPage, TablaAuditoria
+│   └── portal/             PortalPage, CardProcesoPublico
+│
+├── utils/
+│   ├── cn.js               Helper de clsx + tailwind-merge
+│   └── descargarTxt.js     Descarga de archivos .txt con BOM UTF-8
+│
+└── App.jsx                 Routing principal, lazy loading, layouts
+
+
+================================================================
+FIN PARTE 1 — Ver PARTE 2 para descripción funcional de cada módulo
+================================================================

@@ -1,0 +1,492 @@
+================================================================
+SICST MAX — SISTEMA INTEGRAL DE COMPRAS Y SUBASTAS TRANSPARENTES
+MANUAL TÉCNICO — PARTE 3: DEPLOY, API Y CONFIGURACIÓN
+Versión: v1.0.0-rc2 | Junio 2026
+================================================================
+
+ÍNDICE
+------
+1.  Setup del entorno de desarrollo
+2.  Variables de entorno
+3.  Build de producción
+4.  Deploy on-premise (IIS)
+5.  Deploy on-premise (Apache / Nginx)
+6.  Onboarding de un nuevo tenant (municipio)
+7.  Contratos de API — todos los endpoints requeridos
+8.  Demo flags (URL params para testing)
+9.  Pendientes técnicos
+10. Referencia de versiones y branches
+
+
+================================================================
+1. SETUP DEL ENTORNO DE DESARROLLO
+================================================================
+
+PREREQUISITOS:
+  Node.js 20+
+  npm 10+
+
+INSTALACIÓN:
+  git clone <repo>
+  cd max_smt
+  npm install
+
+ARRANCAR EL DEV SERVER:
+  npm run dev
+  → Disponible en http://localhost:5173
+
+SELECCIÓN DE TENANT EN DESARROLLO:
+  La app carga el tenant "sanmiguel" por defecto (DEFAULT_TENANT_ID).
+  Para probar otro tenant:
+    http://localhost:5173?tenant=demo
+  Para persistir la selección en el navegador:
+    localStorage.setItem('sicst_tenant_dev', 'demo')
+
+FALLBACK SIN BACKEND:
+  Si el backend no está corriendo, el TenantContext detecta
+  import.meta.env.DEV y cae automáticamente al config local
+  del archivo src/config/tenants.js.
+  No aparece ningún error — la app carga con el branding hardcodeado.
+
+AUDITORÍA DE CALIDAD:
+  npm run doctor                    Scan completo del codebase
+  npx react-doctor@latest --diff    Solo archivos cambiados vs master
+  Score mínimo aceptable: 100/100
+
+
+================================================================
+2. VARIABLES DE ENTORNO
+================================================================
+
+ARCHIVO DE EJEMPLO: .env.example
+
+  VITE_API_URL=/api
+  (URL base de la API. Con / al inicio = relativo al mismo dominio)
+
+ARCHIVOS POR ENTORNO:
+  .env.local         Desarrollo local (ignorado por git — no commitear)
+  .env.production    Producción (commiteado, sin secrets)
+
+PARA PRODUCCIÓN ON-PREMISE (mismo servidor):
+  VITE_API_URL=/api
+  El IIS hace reverse proxy de /api/* → backend
+
+PARA PRODUCCIÓN CON API EN SUBDOMINIO SEPARADO:
+  VITE_API_URL=https://api.sicst.app
+  (Agregar CORS en el backend para el dominio del frontend)
+
+NOTA: Vite solo expone variables que empiezan con VITE_.
+En el código se acceden como import.meta.env.VITE_API_URL.
+Las variables se resuelven en BUILD TIME, no en runtime.
+
+
+================================================================
+3. BUILD DE PRODUCCIÓN
+================================================================
+
+COMANDO:
+  npm run build
+
+OUTPUT: carpeta dist/
+  dist/index.html       Punto de entrada (0.78 kB)
+  dist/assets/          Todos los chunks JS, CSS y fuentes
+
+CHUNKS PRINCIPALES (gzip):
+  vendor-react.js    59 kB   React + React DOM + React Router
+  index.js           22 kB   Runtime compartido + contexts + layouts
+  index.css          22 kB   Tailwind CSS compilado
+  vendor-util.js      9 kB   axios + clsx + tailwind-merge
+  DetalleCompra.js    9 kB   Vista maestra (módulo más grande)
+  vendor-ui.js        6 kB   lucide-react (tree-shaken)
+  PortalPage.js       6 kB   Portal Ciudadano completo
+  (resto de páginas: 1-6 kB cada una)
+
+El contenido de dist/ es 100% estático. No requiere Node.js en producción.
+El servidor solo necesita servir archivos estáticos y redirigir al index.html.
+
+VERIFICAR BUILD LOCALMENTE:
+  npm run preview
+  → Disponible en http://localhost:4173
+
+
+================================================================
+4. DEPLOY ON-PREMISE — IIS (WINDOWS SERVER)
+================================================================
+
+PASOS:
+
+  1. Generar el build:
+       npm run build
+
+  2. Copiar dist/ al webroot del IIS:
+       C:\inetpub\wwwroot\sicst-max\   (o la ruta que configure infra)
+
+  3. Verificar que el módulo URL Rewrite esté instalado en IIS.
+     Sin él, las rutas tipo /compras/EXP-0001 devuelven 404.
+     (Se instala desde el Web Platform Installer de Microsoft)
+
+  4. El archivo dist/web.config ya está incluido y configurado.
+     No requiere modificación. Contiene:
+       - Regla SPA Fallback: toda ruta no-archivo → index.html
+       - MIME type para .woff2 (fuentes)
+
+  5. Configurar el Application Pool en modo "No Managed Code"
+     (el sitio no usa .NET, es 100% estático)
+
+  6. Si hay reverse proxy hacia el backend:
+     Agregar una segunda regla en web.config para /api/* → backend:
+
+     <rule name="API Proxy" stopProcessing="true">
+       <match url="^api/(.*)" />
+       <action type="Rewrite" url="http://localhost:3000/api/{R:1}" />
+     </rule>
+
+  7. En el Application Pool, habilitar SSL si el subdominio usa HTTPS.
+
+VERIFICACIÓN:
+  - Abrir sanmiguel.sicst.app → debe cargar la app
+  - Navegar a /compras y recargar (F5) → debe seguir en /compras (no 404)
+  - La barra de URL debe mantener el subdominio correcto
+
+
+================================================================
+5. DEPLOY ON-PREMISE — APACHE / NGINX
+================================================================
+
+APACHE:
+  El archivo dist/.htaccess ya está incluido. Contiene:
+    RewriteEngine On
+    RewriteBase /
+    RewriteRule ^index\.html$ - [L]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule . /index.html [L]
+
+  Requisitos:
+    - mod_rewrite habilitado
+    - AllowOverride All en el VirtualHost del sitio
+
+NGINX:
+  El .htaccess no aplica en Nginx. Agregar en la config del servidor:
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+
+================================================================
+6. ONBOARDING DE UN NUEVO TENANT (MUNICIPIO)
+================================================================
+
+Para dar de alta un nuevo municipio en la plataforma sin tocar código:
+
+  PASO 1: CONFIGURAR DNS
+    Crear registro A o CNAME: nuevomuni.sicst.app → IP del servidor
+    (Si hay wildcard *.sicst.app ya configurado, esto es automático)
+
+  PASO 2: INSERTAR EN BASE DE DATOS
+    INSERT en la tabla TenantProfile:
+      tenant_id     "nuevomuni"
+      name          "Municipio de Nueva Ciudad"
+      short_name    "NVC"
+      logo_url      "/tenants/nuevomuni/logo.svg"  (o null)
+      favicon_url   null
+      theme         { JSON con todas las variables CSS — ver estructura abajo }
+
+    Estructura del campo theme (JSON):
+      {
+        "--color-primary":   "R G B",   (ej: "0 212 255" para cyan)
+        "--color-secondary": "R G B",
+        "--color-accent":    "R G B",
+        "--color-success":   "R G B",
+        "--color-warning":   "R G B",
+        "--color-danger":    "R G B",
+        "--color-bg":        "R G B",   (fondo oscuro, ej: "3 7 18")
+        "--color-surface":   "R G B",   (superficies, ej: "10 18 40")
+        "--color-border":    "R G B",   (bordes, ej: "30 50 90")
+        "--color-text":      "R G B",   (texto principal)
+        "--color-muted":     "R G B"    (texto secundario)
+      }
+    IMPORTANTE: Los valores son "R G B" en decimal (sin comas, sin #).
+    Tailwind los consume con esta sintaxis para soportar opacidad:
+      bg-tenant-primary/50  →  background: rgb(R G B / 0.5)
+
+  PASO 3: SUBIR ASSETS
+    Subir el logo al servidor de assets en la ruta configurada.
+    Formato recomendado: SVG (vectorial, sin pérdida de calidad).
+
+  PASO 4: CREAR USUARIOS INICIALES
+    Insertar en la tabla de usuarios del tenant:
+      - Al menos 1 admin
+      - Los usuarios que el municipio necesite por rol
+
+  PASO 5: VERIFICAR
+    En navegador: https://nuevomuni.sicst.app
+    Debe cargar con los colores del nuevo municipio.
+    En desarrollo: http://localhost:5173?tenant=nuevomuni
+
+  PASO 6: CONFIGURAR PARÁMETROS MUNICIPALES
+    Desde la cuenta admin del nuevo tenant, configurar:
+      - Modalidades de contratación permitidas
+      - Jerarquía de aprobación (quién firma, en qué orden)
+      - Plantilla de Resolución de Adjudicación
+      - Plantilla de Orden de Compra
+      - Plantilla de Acta de Recepción Conforme
+    Sin estos parámetros, los módulos correspondientes mostrarán
+    EmptyState isMandatory y no podrán usarse.
+
+
+================================================================
+7. CONTRATOS DE API — TODOS LOS ENDPOINTS REQUERIDOS
+================================================================
+
+A continuación se listan TODOS los endpoints que el backend debe
+implementar para que el frontend funcione en producción.
+Los marcados con [MOCK] tienen implementación mock en los servicios;
+los marcados con [PENDIENTE] aún no tienen mock.
+
+--- TENANT ---
+
+  GET /api/tenants/:tenantId/branding
+  [OPERATIVO EN BACKEND]
+  Response:
+    {
+      "id": "sanmiguel",
+      "name": "Municipio de San Miguel de Tucumán",
+      "shortName": "SMT",
+      "logoUrl": "/tenants/sanmiguel/logo.svg",
+      "faviconUrl": null,
+      "theme": { "--color-primary": "0 212 255", ... }
+    }
+  404 si tenant_id no existe → frontend muestra pantalla fatal
+
+--- AUTENTICACIÓN ---
+
+  POST /api/auth/login
+  [PENDIENTE — actualmente mock local]
+  Body:   { "email": "...", "password": "..." }
+  Response: { "token": "jwt...", "user": { id, name, email, role, tenantId } }
+  401 si credenciales incorrectas
+
+--- PORTAL CIUDADANO (público, sin auth) ---
+
+  GET /api/portal/:tenantId/procesos
+  [MOCK en portalService.js]
+  Response: [ { id, expedienteNum, titulo, area, modalidad, estado,
+                montoBase, montoAdjudicado, ganador, fechaSubasta,
+                fechaAdjudicacion } ]
+  Solo retorna estado PUBLICADO y ADJUDICADO. Nunca borradores.
+
+  GET /api/portal/:tenantId/documentos
+  [MOCK en portalService.js]
+  Response: [ { id, expedienteNum, tipo, titulo, fechaEmision, contenido } ]
+  El campo contenido es texto plano ya renderizado (listo para descargar).
+
+--- PROVEEDORES ---
+
+  GET /api/:tenantId/proveedores
+  [MOCK] Lista de proveedores del tenant
+
+  POST /api/:tenantId/proveedores
+  [MOCK] Crear nuevo proveedor
+
+  GET /api/arca/verificar/:cuit
+  [MOCK con contingencia] Verificación ARCA/AFIP
+  Si falla (503) el frontend activa el formulario de carga manual.
+
+--- COMPRAS / EXPEDIENTES ---
+
+  GET /api/:tenantId/compras
+  [MOCK] Lista de expedientes del tenant
+
+  POST /api/:tenantId/compras
+  [MOCK] Crear nuevo expediente
+
+  GET /api/:tenantId/compras/:id
+  [MOCK en expedienteService.js] Detalle completo del expediente
+  Response incluye: datos generales, proveedores, lances, circuito
+  de aprobación, documentos generados, recepción (si existe)
+
+  POST /api/:tenantId/compras/:id/recepcion
+  [MOCK] Registrar recepción de bienes
+  Body: { fechaRecepcion, lugarRecepcion, responsableRecepcion, observaciones }
+  Response: { ok, numActa, timestamp }
+  Además debe escribir en la bitácora de auditoría.
+
+--- SUBASTA ---
+
+  WebSocket: ws://servidor/api/:tenantId/subastas/:id/live
+  [MOCK con MockWebSocket] Lances en tiempo real
+  El servidor emite eventos de tipo: LANCE, INICIO, CIERRE, ANTINIPER
+  El cliente envía: { tipo: "LANCE", monto: 500000 }
+
+--- ADJUDICACIÓN ---
+
+  GET /api/:tenantId/adjudicacion/plantillas
+  [MOCK en adjudicacionService.js] Plantillas de contrato y orden
+
+  POST /api/:tenantId/adjudicacion/:id/firmar
+  [MOCK] Firmar etapa del circuito
+  Body: { etapaId, accion: "aprobar"|"rechazar", firmante, observaciones }
+
+--- APROBACIÓN ---
+
+  GET /api/:tenantId/aprobacion/jerarquias
+  [MOCK en aprobacionService.js] Config de jerarquías de aprobación
+  Retorna null si no hay jerarquías configuradas → EmptyState isMandatory
+
+  GET /api/:tenantId/aprobacion/expedientes
+  [MOCK] Lista de expedientes pendientes para el usuario logueado
+
+  GET /api/:tenantId/aprobacion/expedientes/:id
+  [MOCK] Detalle completo del expediente para aprobar
+
+  POST /api/:tenantId/aprobacion/:id/firmar
+  [MOCK] Firmar etapa del circuito de aprobación
+
+--- AUDITORÍA ---
+
+  GET /api/:tenantId/auditoria
+  [MOCK en auditoriaService.js]
+  Query params: fechaDesde, fechaHasta, modulo, tipo, q (búsqueda)
+  Response: { eventos: [...], total: N }
+
+  POST /api/:tenantId/auditoria/evento
+  [MOCK — logEventoExterno()] Escritura de evento externo
+  Llamado silenciosamente desde otros módulos (recepción, adjudicación)
+
+--- CONFIGURACIÓN (admin) ---
+
+  GET /api/:tenantId/config/plantillas
+  [MOCK] Retorna plantillas configuradas (conformidad, contrato, orden)
+  Retorna null por tipo si no está configurada → EmptyState isMandatory
+
+  GET /api/:tenantId/config/modalidades
+  [MOCK] Retorna modalidades de contratación habilitadas
+  Retorna null si no hay → EmptyState isMandatory en Paso 3 del wizard
+
+
+================================================================
+8. DEMO FLAGS — URL PARAMS PARA TESTING
+================================================================
+
+Estos parámetros de URL activan estados especiales para demostrar
+los EmptyState bloqueantes y condiciones de error sin modificar datos.
+
+  ?sinJerarquias
+    Módulo: Aprobación (/aprobacion)
+    Efecto: Simula que el municipio no configuró la jerarquía de firmas.
+            La bandeja de aprobación muestra EmptyState isMandatory.
+
+  ?sinPlantillaContrato
+    Módulo: Adjudicación (/adjudicacion) → tab Resolución
+    Efecto: Simula plantilla de Resolución de Adjudicación no configurada.
+            VisorPlantillas muestra EmptyState isMandatory en ese tab.
+
+  ?sinPlantillaOrden
+    Módulo: Adjudicación (/adjudicacion) → tab Orden de Compra
+    Efecto: Simula plantilla de Orden de Compra no configurada.
+            VisorPlantillas muestra EmptyState isMandatory en ese tab.
+
+  ?sinDocConformidad
+    Módulo: Recepción (/compras/:id → Tab Recepción)
+    Efecto: Simula plantilla de Acta de Conformidad no configurada.
+            El formulario de recepción es reemplazado por EmptyState isMandatory.
+
+  ?sinModalidades
+    Módulo: Wizard de Compra (/compras/nueva → Paso 3)
+    Efecto: Simula que no hay modalidades de contratación configuradas.
+            El Paso 3 muestra EmptyState isMandatory y bloquea el avance.
+
+  ?arcaCaida
+    Módulo: Wizard de Proveedores (/proveedores/nuevo → Paso 2)
+    Efecto: Simula que la API de ARCA/AFIP no responde.
+            El sistema muestra el formulario de carga manual de contingencia.
+
+
+================================================================
+9. PENDIENTES TÉCNICOS
+================================================================
+
+PRIORIDAD ALTA (bloquean funcionalidad en producción):
+
+  1. Reemplazar mock auth por POST /api/auth/login real
+     Archivo: src/services/api/authService.js (o similar)
+     Token JWT debe incluir tenantId para validación server-side
+
+  2. WebSocket real para el Trading Room
+     Actualmente: MockWebSocket en src/pages/compras/TradingRoomPage.jsx
+     Reemplazar por WebSocket nativo o socket.io apuntando al backend
+
+  3. Todos los endpoints marcados [MOCK] en la sección 7
+     Los servicios en src/services/api/ ya tienen la estructura esperada;
+     solo hay que reemplazar los datos hardcodeados por fetch reales
+
+PRIORIDAD MEDIA:
+
+  4. Panel de administración ONE (/admin)
+     Para que ONE pueda crear y gestionar tenants sin ir directo a la DB.
+     Incluye: crear tenant, subir logo, elegir paleta, activar módulos.
+
+  5. /proveedores/arca — placeholder pendiente
+     Módulo de detalle de verificación ARCA para el proveedor.
+
+  6. /documentos — placeholder pendiente
+     Repositorio documental del tenant.
+
+PRIORIDAD BAJA:
+
+  7. Tests automatizados (E2E y unitarios)
+     El codebase no tiene test suite aún.
+     react-doctor garantiza calidad de código pero no cubre lógica de negocio.
+
+  8. Internacionalización (i18n)
+     Sistema actual solo en español. Para municipios de otras provincias
+     puede ser necesario soporte multi-idioma.
+
+
+================================================================
+10. REFERENCIA DE VERSIONES Y BRANCHES
+================================================================
+
+TAGS DE VERSIÓN:
+  v1.0.0-rc1   Primera Release Candidate — Core completo + Portal Ciudadano
+  v1.0.0-rc2   Segunda Release Candidate — TenantContext dinámico (SaaS real)
+
+BRANCHES:
+  master                    Rama principal, código aprobado para producción
+  feature/portal-ciudadano  (mergeado) Portal Ciudadano
+  feature/dynamic-branding  (mergeado) TenantContext dinámico
+  feature/aprobacion        (mergeado) Módulo de Aprobación
+  feature/expediente-recepcion (mergeado) Vista Maestra + Recepción
+  feature/auditoria         (mergeado) Módulo de Auditoría
+  feature/trading-room      (mergeado) Trading Room
+
+FLUJO DE TRABAJO GIT:
+  1. Crear branch desde master: git checkout -b feature/nombre
+  2. Desarrollar con commits atómicos y descriptivos
+  3. Correr react-doctor --diff antes de cada commit
+  4. Merge a master con --no-ff (preserva historial del feature)
+  5. Tag de versión si corresponde release
+
+REPOSITORIO REMOTO:
+  git@gitlab.tucuman.gob.ar:sistemas/sicst-max-frontend.git
+  Estado actual: pendiente de push (VPN de infraestructura pendiente)
+
+
+================================================================
+FIN DEL MANUAL TÉCNICO SICST MAX v1.0.0-rc2
+================================================================
+
+Para consultas técnicas sobre este sistema comunicarse con ONE.
+Las tres partes de este manual cubren la totalidad del sistema:
+  PARTE 1: Visión, Arquitectura, Roles y Patrones
+  PARTE 2: Descripción funcional de cada módulo
+  PARTE 3: Deploy, API, Demo flags y Pendientes
+================================================================
